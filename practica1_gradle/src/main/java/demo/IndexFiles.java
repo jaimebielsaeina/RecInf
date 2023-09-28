@@ -1,6 +1,7 @@
 package demo;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexWriter;
@@ -55,17 +56,6 @@ public class IndexFiles {
                 create = false;
             }
         }
-        String[] fieldNames = {
-                "title",
-                "identifier",
-                "subject",
-                "type",
-                "description",
-                "creator",
-                "publisher",
-                "format",
-                "language"
-        };
 
         if (docsPath == null) {
             System.err.println("Usage: " + usage);
@@ -83,7 +73,7 @@ public class IndexFiles {
             System.out.println("Indexing to directory '" + indexPath + "'...");
 
             Directory dir = FSDirectory.open(Paths.get(indexPath));
-            Analyzer analyzer = new StandardAnalyzer();
+            Analyzer analyzer = new SpanishAnalyzer2();
             IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
 
             if (create) {
@@ -102,18 +92,8 @@ public class IndexFiles {
             //
             // iwc.setRAMBufferSizeMB(256.0);
 
-            Map<String, IndexWriter> writers = new HashMap<>();
-            writers.put("title", new IndexWriter(dir, iwc));
-            writers.put("identifier", new IndexWriter(dir, iwc));
-            writers.put("subject", new IndexWriter(dir, iwc));
-            writers.put("type", new IndexWriter(dir, iwc));
-            writers.put("description", new IndexWriter(dir, iwc));
-            writers.put("creator", new IndexWriter(dir, iwc));
-            writers.put("publisher", new IndexWriter(dir, iwc));
-            writers.put("format", new IndexWriter(dir, iwc));
-            writers.put("language", new IndexWriter(dir, iwc));
-
-            indexDocs(writers, docDir);
+            IndexWriter writer = new IndexWriter(dir, iwc);
+            indexDocs(writer, docDir);
 
             // NOTE: if you want to maximize search performance,
             // you can optionally call forceMerge here.  This can be
@@ -123,8 +103,7 @@ public class IndexFiles {
             //
             // writer.forceMerge(1);
 
-            for (String fieldName : fieldNames)
-                writers.get(fieldName).close();
+            writer.close();
 
             Date end = new Date();
             System.out.println(end.getTime() - start.getTime() + " total milliseconds");
@@ -157,11 +136,11 @@ public class IndexFiles {
      * Indexes the given file using the given writer, or if a directory is given,
      * recurses over files and directories found under the given directory.
      *
-     * @param writers Writer to the index where the given file/dir info will be stored
+     * @param writer Writer to the index where the given file/dir info will be stored
      * @param file The file to index, or the directory to recurse into to find files to index
      * @throws IOException If there is a low-level I/O error
      */
-    static void indexDocs(Map<String, IndexWriter> writers, File file)
+    static void indexDocs(IndexWriter writer, File file)
             throws IOException {
 
         String[] fieldNames = {
@@ -185,7 +164,7 @@ public class IndexFiles {
                     List<String> fileList = new LinkedList<String>(Arrays.asList(files));
                     Collections.sort(fileList);
                     for (String fileName: fileList) {
-                        indexDocs(writers, new File(file, fileName));
+                        indexDocs(writer, new File(file, fileName));
                     }
                 }
             } else {
@@ -216,21 +195,21 @@ public class IndexFiles {
 
                     for (String fieldName : fieldNames) {
                         // Traverse and manipulate the XML document
-                        NodeList elements = document.getElementsByTagName(fieldName);
+                        NodeList elements = document.getElementsByTagName("dc:"+fieldName);
 
                         addData(fieldName, elements, doc);
 
-                        if (writers.get(fieldName).getConfig().getOpenMode() == OpenMode.CREATE) {
-                            // New index, so we just add the document (no old document can be there):
-                            System.out.println("adding " + file);
-                            writers.get(fieldName).addDocument(doc);
-                        } else {
-                            // Existing index (an old copy of this document may have been indexed) so
-                            // we use updateDocument instead to replace the old one matching the exact
-                            // path, if present:
-                            System.out.println("updating " + file);
-                            writers.get(fieldName).updateDocument(new Term("path", file.getPath()), doc);
-                        }
+//                        if (writer.getConfig().getOpenMode() == OpenMode.CREATE) {
+//                            // New index, so we just add the document (no old document can be there):
+//                            System.out.println("adding " + file);
+//                            writer.addDocument(doc);
+//                        } else {
+//                            // Existing index (an old copy of this document may have been indexed) so
+//                            // we use updateDocument instead to replace the old one matching the exact
+//                            // path, if present:
+//                            System.out.println("updating " + file);
+//                            writer.updateDocument(new Term("path", file.getPath()), doc);
+//                        }
                     }
 
                     /*
@@ -255,7 +234,7 @@ public class IndexFiles {
                     // Note that FileReader expects the file to be in UTF-8 encoding.
                     // If that's not the case searching for special characters will fail.
                     doc.add(new TextField("contents", new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8))));
-
+*/
                     if (writer.getConfig().getOpenMode() == OpenMode.CREATE) {
                         // New index, so we just add the document (no old document can be there):
                         System.out.println("adding " + file);
@@ -267,8 +246,6 @@ public class IndexFiles {
                         System.out.println("updating " + file);
                         writer.updateDocument(new Term("path", file.getPath()), doc);
                     }
-
-                    */
 
                 } catch (FileNotFoundException fnfe) {
                     // at least on windows, some temporary files raise this exception with an "access denied" message
