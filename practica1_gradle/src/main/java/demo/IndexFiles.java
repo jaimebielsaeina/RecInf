@@ -119,7 +119,9 @@ public class IndexFiles {
         boolean isTextField = !(fieldName.equals("identifier") ||
                 fieldName.equals("type") ||
                 fieldName.equals("format") ||
-                fieldName.equals("language"));
+                fieldName.equals("language") ||
+                fieldName.equals("relation") ||
+                fieldName.equals("rights"));
 
         for  (int i = 0; i < elements.getLength(); i++) {
             Element element = (Element) elements.item(i);
@@ -152,7 +154,10 @@ public class IndexFiles {
                 "creator",
                 "publisher",
                 "format",
-                "language"
+                "language",
+                "contributor",
+                "relation",
+                "rights"
         };
 
         // do not try to index files that cannot be read
