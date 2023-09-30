@@ -129,6 +129,8 @@ public class IndexFiles {
 
             if (isTextField)
                 doc.add(new TextField(fieldName, value, Field.Store.NO));
+            else if (fieldName.equals("identifier"))
+                doc.add(new StringField(fieldName, value, Field.Store.YES));
             else
                 doc.add(new StringField(fieldName, value, Field.Store.NO));
         }

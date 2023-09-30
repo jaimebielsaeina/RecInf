@@ -1,8 +1,6 @@
 package demo;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
@@ -49,47 +47,68 @@ public class SearchFiles {
         }
 
         String index = "index";
-        String field = "contents";
-        boolean additionalInfo = false;
+        String queryFile = "";
+        String outFile = "";
 
         for (int i = 0; i < args.length; i++) {
             if ("-index".equals(args[i])) {
                 index = args[++i];
-            } else if ("-field".equals(args[i])) {
-                field = args[++i];
-            } else if ("-info".equals(args[i])) {
-                additionalInfo = true;
+            } else if ("-infoNeeds".equals(args[i])) {
+                queryFile = args[++i];
+            } else if ("-output".equals(args[i])) {
+                outFile = args[++i];
             }
+        }
+
+        if (queryFile.isEmpty() || outFile.isEmpty()) {
+            System.out.println("Please provide index and query files as well as the results file properly.");
+            System.exit(1);
         }
 
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get(index)));
         IndexSearcher searcher = new IndexSearcher(reader);
         Analyzer analyzer = new SpanishAnalyzer2();
 
-        System.out.println("Enter query: ");
+        System.out.println("Processing queries in file " + queryFile + ".");
 
-        BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+        try {
+            BufferedReader queriesReader = new BufferedReader(new FileReader(queryFile, StandardCharsets.UTF_8));
+            BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(outFile));
+            String queryStr;
+            QueryParser parser;
+            Query query;
+            int i = 0;
 
-        QueryParser parser = new QueryParser(field, analyzer);
+            while ((queryStr = queriesReader.readLine()) != null) {
+                if (!queryStr.isEmpty()) {
+                    queryStr = queryStr.trim();
+                    if (!queryStr.isEmpty()) {
+                        parser = new QueryParser(queryStr, analyzer);
+                        query = parser.parse(queryStr);
+                        showResults(searcher, query, i++, resultsWriter);
+                    }
+                }
+            }
+            queriesReader.close();
+            resultsWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        String queryString = in.readLine();
-
-        if (queryString != null && !queryString.isEmpty()) {
+        /*if (queryString != null && !queryString.isEmpty()) {
             queryString = queryString.trim();
             if (!queryString.isEmpty()) {
                 Query query = parser.parse(queryString);
                 showResults(searcher, query, additionalInfo);
             }
-        }
+        }*/
     }
 
     /**
      * Typical procedure to show the results of a query. For performance issues, the list of results is usually limited to a maximum around 1,000 records.
      * More details at https://lucene.apache.org/core/9_7_0/core/org/apache/lucene/search/IndexSearcher.html
      */
-    public static void showResults(IndexSearcher searcher, Query query, boolean additionalInfo) throws IOException {
-        System.out.println("Searching for: " + query.toString());
-
+    public static void showResults(IndexSearcher searcher, Query query, int order, BufferedWriter outFile) throws IOException {
         TopDocs results = searcher.search(query, INITIAL_HITS);
         int numTotalHits = Math.toIntExact(results.totalHits.value);
         System.out.println(numTotalHits + " total matching documents");
@@ -97,30 +116,11 @@ public class SearchFiles {
         if (numTotalHits>0) {
             ScoreDoc[] hits = searcher.search(query, numTotalHits).scoreDocs;
             StoredFields storedFields = searcher.storedFields();
-            for (int i = 0; i < hits.length; i++) {
-                Document doc = storedFields.document(hits[i].doc);
+            for (ScoreDoc hit : hits) {
+                Document doc = storedFields.document(hit.doc);
                 String path = doc.get("path");
                 if (path != null) {
-                    System.out.println((i + 1) + ". " + path);
-                } else {
-                    System.out.println((i + 1) + ". No path for this document");
-                }
-                if (additionalInfo) {
-                    System.out.println("\tdoc=" + hits[i].doc + " score=" + hits[i].score);
-
-                    long ms = Long.parseLong(doc.get("modified"));
-
-                    // Convert milliseconds to CEST timezone
-                    Instant instant = Instant.ofEpochMilli(ms);
-                    ZoneId cestZone = ZoneId.of("Europe/Paris");
-                    ZonedDateTime cestTime = instant.atZone(cestZone);
-
-                    // Define a custom date-time formatter
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss zzz yyyy", Locale.ENGLISH);
-
-                    // Format the ZonedDateTime and print
-                    String formattedDate = cestTime.format(formatter);
-                    System.out.println(formattedDate);
+                    outFile.write((order) + "\t" + doc.get("identifier") + "\n");
                 }
             }
         }
