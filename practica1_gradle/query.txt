@@ -1,2 +1,7 @@
 creator:"Gómez Gardeñes"
-creator:"Gómez Gardeñes"
+creator:"Gardeñes Gómez"
+creator:Gómez
+creator:Gómez contributor:Moreno
+creator:Gómez contributor:Moreno publisher:Física
+date:2019
+description:de

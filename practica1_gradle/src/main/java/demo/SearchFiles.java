@@ -85,7 +85,7 @@ public class SearchFiles {
                     if (!queryStr.isEmpty()) {
                         parser = new QueryParser(queryStr, analyzer);
                         query = parser.parse(queryStr);
-                        showResults(searcher, query, i++, resultsWriter);
+                        showResults(searcher, query, ++i, resultsWriter);
                     }
                 }
             }

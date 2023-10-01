@@ -121,7 +121,8 @@ public class IndexFiles {
                 fieldName.equals("format") ||
                 fieldName.equals("language") ||
                 fieldName.equals("relation") ||
-                fieldName.equals("rights"));
+                fieldName.equals("rights") ||
+                fieldName.equals("date"));
 
         for  (int i = 0; i < elements.getLength(); i++) {
             Element element = (Element) elements.item(i);
@@ -159,7 +160,8 @@ public class IndexFiles {
                 "language",
                 "contributor",
                 "relation",
-                "rights"
+                "rights",
+                "date"
         };
 
         // do not try to index files that cannot be read
