@@ -62,6 +62,7 @@ public final class SpanishAnalyzer2 extends StopwordAnalyzerBase {
 
         static {
             try {
+                // Get the default stopwords set
                 DEFAULT_STOP_SET =
                         WordlistLoader.getSnowballWordSet(
                                 IOUtils.requireResourceNonNull(
@@ -97,6 +98,7 @@ public final class SpanishAnalyzer2 extends StopwordAnalyzerBase {
      * @param stemExclusionSet a set of terms not to be stemmed
      */
     public SpanishAnalyzer2(CharArraySet stopwords, CharArraySet stemExclusionSet) {
+        // Apply stemming and stopwords cleaning
         super(stopwords);
         this.stemExclusionSet = CharArraySet.unmodifiableSet(CharArraySet.copy(stemExclusionSet));
     }
@@ -112,11 +114,19 @@ public final class SpanishAnalyzer2 extends StopwordAnalyzerBase {
      */
     @Override
     protected TokenStreamComponents createComponents(String fieldName) {
+        // Apply different filters
         final Tokenizer source = new StandardTokenizer();
+        // To lowercase
         TokenStream result = new LowerCaseFilter(source);
+
+        // Clean stopwords
         result = new StopFilter(result, stopwords);
-        if (!stemExclusionSet.isEmpty()) result = new SetKeywordMarkerFilter(result, stemExclusionSet);
+        if (!stemExclusionSet.isEmpty())
+            result = new SetKeywordMarkerFilter(result, stemExclusionSet);
+
+        // Apply spanish snowball analyzing and stemming
         result = new SnowballFilter(result, "Spanish");
+
         return new TokenStreamComponents(source, result);
     }
 

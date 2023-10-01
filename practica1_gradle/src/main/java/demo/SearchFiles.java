@@ -46,7 +46,7 @@ public class SearchFiles {
             System.exit(0);
         }
 
-        String index = "index";
+        String index = "";
         String queryFile = "";
         String outFile = "";
 
@@ -60,11 +60,12 @@ public class SearchFiles {
             }
         }
 
-        if (queryFile.isEmpty() || outFile.isEmpty()) {
+        if (index.isEmpty() || queryFile.isEmpty() || outFile.isEmpty()) {
             System.out.println("Please provide index and query files as well as the results file properly.");
             System.exit(1);
         }
 
+        // Create processing classes
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get(index)));
         IndexSearcher searcher = new IndexSearcher(reader);
         Analyzer analyzer = new SpanishAnalyzer2();
@@ -79,12 +80,17 @@ public class SearchFiles {
             Query query;
             int i = 0;
 
+            // For each query
             while ((queryStr = queriesReader.readLine()) != null) {
                 if (!queryStr.isEmpty()) {
+                    // Clean query
                     queryStr = queryStr.trim();
                     if (!queryStr.isEmpty()) {
+                        // Parse query
                         parser = new QueryParser(queryStr, analyzer);
                         query = parser.parse(queryStr);
+
+                        // Execute query and show results
                         showResults(searcher, query, ++i, resultsWriter);
                     }
                 }
@@ -109,18 +115,26 @@ public class SearchFiles {
      * More details at https://lucene.apache.org/core/9_7_0/core/org/apache/lucene/search/IndexSearcher.html
      */
     public static void showResults(IndexSearcher searcher, Query query, int order, BufferedWriter outFile) throws IOException {
+        // Execute query
         TopDocs results = searcher.search(query, INITIAL_HITS);
         int numTotalHits = Math.toIntExact(results.totalHits.value);
         System.out.println(numTotalHits + " total matching documents");
 
+        // If there were any hits
         if (numTotalHits>0) {
+            // Order the hits by score
             ScoreDoc[] hits = searcher.search(query, numTotalHits).scoreDocs;
             StoredFields storedFields = searcher.storedFields();
+
+            // For each hit
             for (ScoreDoc hit : hits) {
+                // Get document fields
                 Document doc = storedFields.document(hit.doc);
                 String path = doc.get("path");
+
+                // Print document identifyer
                 if (path != null) {
-                    outFile.write((order) + "\t" + doc.get("identifier") + "\n");
+                    outFile.write(order + "\t" + doc.get("identifier") + "\n");
                 }
             }
         }
