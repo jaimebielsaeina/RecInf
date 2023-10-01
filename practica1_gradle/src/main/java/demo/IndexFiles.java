@@ -114,6 +114,8 @@ public class IndexFiles {
         }
     }
 
+    // Adds a field to a Lucene document, using elements as content and fieldName as field name
+    //  Applies a fixed field type to depending on the field name
     static void addData(String fieldName, NodeList elements, Document doc)
     {
         boolean isTextField = !(fieldName.equals("identifier") ||
