@@ -9,20 +9,20 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
 
 /**
@@ -68,7 +68,7 @@ public class SearchFiles {
         // Create processing classes
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get(index)));
         IndexSearcher searcher = new IndexSearcher(reader);
-        Analyzer analyzer = new SpanishAnalyzer2();
+        Analyzer analyzer = new StandardAnalyzer();
 
         System.out.println("Processing queries in file " + queryFile + ".");
 
@@ -77,8 +77,9 @@ public class SearchFiles {
             BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(outFile));
             String queryStr;
             QueryParser parser;
-            Query query;
             int i = 0;
+            Query noSpatialQuery;
+            BooleanQuery spatialQuery;
 
             // For each query
             while ((queryStr = queriesReader.readLine()) != null) {
@@ -86,12 +87,56 @@ public class SearchFiles {
                     // Clean query
                     queryStr = queryStr.trim();
                     if (!queryStr.isEmpty()) {
-                        // Parse query
-                        parser = new QueryParser(queryStr, analyzer);
-                        query = parser.parse(queryStr);
 
-                        // Execute query and show results
-                        showResults(searcher, query, ++i, resultsWriter);
+                        // Create a Pattern object for the spatial regular expression
+                        Pattern spatialRegex = Pattern.compile("spatial:(.*?)\\s");
+
+                        // Create a Matcher object to find matches in the query string
+                        Matcher spatialMatcher = spatialRegex.matcher(queryStr);
+
+                        String spatialQueryStr = "";
+                        String noSpatialQueryStr = queryStr; // Initialize with the original query
+
+                        // Check if the spatial part is found and extract it
+                        if (spatialMatcher.find()) {
+                            spatialQueryStr = spatialMatcher.group(1);
+                            // Remove the spatial part from the rest
+                            noSpatialQueryStr = noSpatialQueryStr.replaceFirst("spatial:(.*?)\\s", "").trim();
+                        }
+
+
+                        if (!spatialQueryStr.isEmpty()) {
+                            String[] coordinates = queryStr.substring(8).split(" ")[0].split(",");
+                            Query westRangeQuery = DoublePoint.newRangeQuery("west", Double.NEGATIVE_INFINITY, Double.parseDouble(coordinates[1]));
+                            Query southRangeQuery = DoublePoint.newRangeQuery("south", Double.NEGATIVE_INFINITY, Double.parseDouble(coordinates[3]));
+                            Query eastRangeQuery = DoublePoint.newRangeQuery("east", Double.parseDouble(coordinates[0]), Double.POSITIVE_INFINITY);
+                            Query northRangeQuery = DoublePoint.newRangeQuery("north", Double.parseDouble(coordinates[2]), Double.POSITIVE_INFINITY);
+
+                            spatialQuery = new BooleanQuery.Builder().add(westRangeQuery, BooleanClause.Occur.MUST)
+                                                                     .add(southRangeQuery, BooleanClause.Occur.MUST)
+                                                                     .add(eastRangeQuery, BooleanClause.Occur.MUST)
+                                                                     .add(northRangeQuery, BooleanClause.Occur.MUST).build();
+
+                            //showResults(searcher, boolQuery, ++i, resultsWriter);
+                        } else
+                            spatialQuery = null;
+
+                        if (!noSpatialQueryStr.isEmpty()) {
+
+                            // Parse query
+                            parser = new QueryParser(queryStr, analyzer);
+                            noSpatialQuery = parser.parse(noSpatialQueryStr);
+                        } else
+                            noSpatialQuery = null;
+
+                        if (noSpatialQuery != null && spatialQuery == null)
+                            showResults(searcher, noSpatialQuery, ++i, resultsWriter);
+                        if (noSpatialQuery == null && spatialQuery != null)
+                            showResults(searcher, spatialQuery, ++i, resultsWriter);
+                        if (noSpatialQuery != null && spatialQuery != null) {
+                            BooleanQuery bothQueries = new BooleanQuery.Builder().add(noSpatialQuery, BooleanClause.Occur.SHOULD)
+                                                                                 .add(spatialQuery, BooleanClause.Occur.SHOULD).build();
+                        }
                     }
                 }
             }

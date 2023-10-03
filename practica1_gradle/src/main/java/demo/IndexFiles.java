@@ -73,7 +73,7 @@ public class IndexFiles {
             System.out.println("Indexing to directory '" + indexPath + "'...");
 
             Directory dir = FSDirectory.open(Paths.get(indexPath));
-            Analyzer analyzer = new SpanishAnalyzer2();
+            Analyzer analyzer = new StandardAnalyzer();
             IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
 
             if (create) {
@@ -204,9 +204,10 @@ public class IndexFiles {
                     doc.add(new StoredField("modified", file.lastModified()));
                     //doc.add(new TextField("contents", new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8))));
 
+                    NodeList elements;
                     for (String fieldName : fieldNames) {
                         // Traverse and manipulate the XML document
-                        NodeList elements = document.getElementsByTagName("dc:"+fieldName);
+                        elements = document.getElementsByTagName("dc:"+fieldName);
 
                         addData(fieldName, elements, doc);
 
@@ -222,6 +223,34 @@ public class IndexFiles {
 //                            writer.updateDocument(new Term("path", file.getPath()), doc);
 //                        }
                     }
+
+                    String value;
+                    String[] fields;
+                    NodeList boundingBoxes = document.getElementsByTagName("ows:BoundingBox");
+                    System.out.println(boundingBoxes.getLength());
+                    if (boundingBoxes.getLength() == 1) {
+                        elements = ((Element)boundingBoxes.item(0)).getElementsByTagName("ows:LowerCorner");
+                        System.out.println((elements.getLength()));
+                        if (elements.getLength() == 1) {
+                            value = elements.item(0).getTextContent();
+                            fields = value.split(" ");
+                            //System.out.println((Double.parseDouble(fields[0])));
+                            //System.out.println((Double.parseDouble(fields[1])));
+                            doc.add(new DoublePoint("west", Double.parseDouble(fields[0])));
+                            doc.add(new DoublePoint("south", Double.parseDouble(fields[1])));
+                        }
+                        elements = ((Element)boundingBoxes.item(0)).getElementsByTagName("ows:UpperCorner");
+                        System.out.println((elements.getLength()));
+                        if (elements.getLength() == 1) {
+                            value = elements.item(0).getTextContent();
+                            fields = value.split(" ");
+                            //System.out.println((Double.parseDouble(fields[0])));
+                            //System.out.println((Double.parseDouble(fields[1])));
+                            doc.add(new DoublePoint("east", Double.parseDouble(fields[0])));
+                            doc.add(new DoublePoint("north", Double.parseDouble(fields[1])));
+                        }
+                    }
+
 
                     /*
                     // Add the path of the file as a field named "path".  Use a
