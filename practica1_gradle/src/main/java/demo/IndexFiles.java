@@ -132,7 +132,7 @@ public class IndexFiles {
             Element element = (Element) elements.item(i);
             String value = element.getTextContent();
 
-            if (fieldName.equals("dcterms:issued")) {
+            if (fieldName.equals("created") || fieldName.equals("issued")) {
                 value = value.replace("-", "");
             }
 

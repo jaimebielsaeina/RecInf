@@ -1,6 +1,8 @@
 package demo;
 
 import java.io.*;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
@@ -8,11 +10,17 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
+import opennlp.tools.postag.POSModel;
+import opennlp.tools.postag.POSTaggerME;
+import opennlp.tools.util.model.BaseModel;
+import opennlp.tools.util.model.UncloseableInputStream;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -26,6 +34,11 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.queryparser.xml.builders.BooleanQueryBuilder;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
+
+import opennlp.tools.tokenize.SimpleTokenizer;
+import opennlp.tools.namefind.NameFinderME;
+import opennlp.tools.namefind.TokenNameFinderModel;
+import opennlp.tools.util.Span;
 
 /**
  * Simple command-line based search demo.
@@ -47,6 +60,126 @@ public class SearchFiles {
             System.out.println(usage);
             System.exit(0);
         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // La necesidad de información original
+        String necesidadInformacion = "John is 26 years old. His best friend's name is Leonard. He has a sister named Penny.";
+
+        // Tokenización
+        SimpleTokenizer tokenizer = SimpleTokenizer.INSTANCE;
+        String[] tokens = tokenizer.tokenize(necesidadInformacion);
+
+        try {
+            InputStream inputStreamNameFinder = SearchFiles.class
+                    .getResourceAsStream("/models/en-ner-person.bin");
+            TokenNameFinderModel model = new TokenNameFinderModel(
+                    inputStreamNameFinder);
+            NameFinderME nameFinderME = new NameFinderME(model);
+            List<Span> spans = Arrays.asList(nameFinderME.find(tokens));
+
+            assert (spans.toString())
+                    .equals("[[0..1) person, [13..14) person, [20..21) person]");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        try {
+
+            // Provide the model name and language code
+            String modelName = "es-ner-misc";
+            String languageCode = "es";
+
+            // Define the URL for the model
+            String modelURL = "https://opennlp.sourceforge.net/models-1.5/" + modelName + ".bin";
+
+            // Open a connection to the model URL
+            URL url = new URL(modelURL);
+            URLConnection connection = url.openConnection();
+
+            // Create an input stream to read the model data
+            InputStream inputStream = connection.getInputStream();
+
+            // Specify where to save the model locally
+            File modelFile = new File("./" + modelName + ".bin");
+
+            // Create an output stream to write the model data
+            OutputStream outputStream = new FileOutputStream(modelFile);
+
+            // Copy data from the input stream to the output stream
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+
+            // Close streams
+            inputStream.close();
+            outputStream.close();
+
+            System.out.println("Model downloaded successfully to " + modelFile.getAbsolutePath());
+
+            // Cargar un modelo de reconocimiento de entidades nombradas (NER) previamente entrenado
+            TokenNameFinderModel model = new TokenNameFinderModel(new FileInputStream(modelFile)); // Reemplaza con tu modelo NER
+
+            // Inicializar el reconocedor de entidades nombradas con el modelo
+            NameFinderME nameFinder = new NameFinderME(model);
+            FileInputStream modelIS = new FileInputStream("es-pos-maxent.model");
+            POSTaggerME posTagger = new POSTaggerME(new POSModel(modelIS));
+
+            // Encontrar las entidades nombradas en el texto
+            String[] posTags = posTagger.tag(tokens);
+
+            for (int i = 0; i < tokens.length; i++) {
+                System.out.println("Token: " + tokens[i] + " - POS: " + posTags[i]);
+            }
+            /*// Crear una consulta booleana con las entidades encontradas
+            StringBuilder booleanQuery = new StringBuilder();
+            for (Span span : spans) {
+                System.out.println("Entidad: " + span.toString() + " - " + tokens[span.getStart()]);
+                //String entity = String.join(" ", tokens, span.getStart(), span.getEnd());
+                //System.out.println(entity);
+                //booleanQuery.append(entity).append(" OR ");
+            }*/
+
+            // Imprimir la consulta booleana resultante
+            //System.out.println("Consulta Booleana: " + booleanQuery.toString());
+            modelIS.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         String index = "";
         String queryFile = "";
@@ -128,7 +261,7 @@ public class SearchFiles {
                             otherQueryStr = otherQueryStr.replaceFirst("issued:\\[(\\d+|\\*) TO (\\d+|\\*)]", "").trim();
                         }
                         if (matcher4.find()) {
-                            issuedNRQueryStr = matcher4.group(0);
+                            createdNRQueryStr = matcher4.group(0);
                             // Remove the spatial part from the rest
                             otherQueryStr = otherQueryStr.replaceFirst("created:\\d+", "").trim();
                         }
@@ -137,7 +270,7 @@ public class SearchFiles {
                             // Remove the spatial part from the rest
                             otherQueryStr = otherQueryStr.replaceFirst("issued:\\d+", "").trim();
                         }
-                        System.out.println(otherQueryStr);
+
                         if (!spatialQueryStr.isEmpty()) {
                             String[] coordinates = queryStr.substring(8).split(" ")[0].split(",");
                             Query westRangeQuery = DoublePoint.newRangeQuery("west", Double.NEGATIVE_INFINITY, Double.parseDouble(coordinates[1]));
