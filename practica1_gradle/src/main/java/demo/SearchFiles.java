@@ -21,7 +21,9 @@ import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.StoredFields;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.queryparser.xml.builders.BooleanQueryBuilder;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
 
@@ -78,33 +80,64 @@ public class SearchFiles {
             String queryStr;
             QueryParser parser;
             int i = 0;
-            Query noSpatialQuery;
-            BooleanQuery spatialQuery;
+            BooleanQuery.Builder queries;
 
             // For each query
             while ((queryStr = queriesReader.readLine()) != null) {
+                queries = new BooleanQuery.Builder();
                 if (!queryStr.isEmpty()) {
                     // Clean query
                     queryStr = queryStr.trim();
                     if (!queryStr.isEmpty()) {
 
                         // Create a Pattern object for the spatial regular expression
-                        Pattern spatialRegex = Pattern.compile("spatial:(.*?)\\s");
+                        Pattern regex1 = Pattern.compile("spatial:-?\\d+.\\d+,-?\\d+.\\d+,-?\\d+.\\d+,-?\\d+.\\d+");
+                        Pattern regex2 = Pattern.compile("created:\\[(\\d+|\\*) TO (\\d+|\\*)]");
+                        Pattern regex3 = Pattern.compile("issued:\\[(\\d+|\\*) TO (\\d+|\\*)]");
+                        Pattern regex4 = Pattern.compile("created:\\d+");
+                        Pattern regex5 = Pattern.compile("issued:\\d+");
 
                         // Create a Matcher object to find matches in the query string
-                        Matcher spatialMatcher = spatialRegex.matcher(queryStr);
+                        Matcher matcher1 = regex1.matcher(queryStr);
+                        Matcher matcher2 = regex2.matcher(queryStr);
+                        Matcher matcher3 = regex3.matcher(queryStr);
+                        Matcher matcher4 = regex4.matcher(queryStr);
+                        Matcher matcher5 = regex5.matcher(queryStr);
 
                         String spatialQueryStr = "";
-                        String noSpatialQueryStr = queryStr; // Initialize with the original query
+                        String createdQueryStr = "";
+                        String issuedQueryStr = "";
+                        String createdNRQueryStr = "";
+                        String issuedNRQueryStr = "";
+                        String otherQueryStr = queryStr; // Initialize with the original query
 
                         // Check if the spatial part is found and extract it
-                        if (spatialMatcher.find()) {
-                            spatialQueryStr = spatialMatcher.group(1);
+                        if (matcher1.find()) {
+                            spatialQueryStr = matcher1.group(0);
                             // Remove the spatial part from the rest
-                            noSpatialQueryStr = noSpatialQueryStr.replaceFirst("spatial:(.*?)\\s", "").trim();
+                            otherQueryStr = otherQueryStr.replaceFirst("spatial:-?\\d+.\\d+,-?\\d+.\\d+,-?\\d+.\\d+,-?\\d+.\\d+", "").trim();
                         }
-
-
+                        if (matcher2.find()) {
+                            createdQueryStr = matcher2.group(0);
+                            // Remove the spatial part from the rest
+                            otherQueryStr = otherQueryStr.replaceFirst("created:\\[(\\d+|\\*) TO (\\d+|\\*)]", "").trim();
+                        }
+                        if (matcher3.find()) {
+                            issuedQueryStr = matcher3.group(0);
+                            // Remove the spatial part from the rest
+                            otherQueryStr = otherQueryStr.replaceFirst("issued:\\[(\\d+|\\*) TO (\\d+|\\*)]", "").trim();
+                        }
+                        if (matcher4.find()) {
+                            issuedNRQueryStr = matcher4.group(0);
+                            // Remove the spatial part from the rest
+                            otherQueryStr = otherQueryStr.replaceFirst("created:\\d+", "").trim();
+                        }
+                        if (matcher5.find()) {
+                            issuedNRQueryStr = matcher5.group(0);
+                            // Remove the spatial part from the rest
+                            otherQueryStr = otherQueryStr.replaceFirst("issued:\\d+", "").trim();
+                        }
+                        System.out.println(otherQueryStr);
                         if (!spatialQueryStr.isEmpty()) {
                             String[] coordinates = queryStr.substring(8).split(" ")[0].split(",");
                             Query westRangeQuery = DoublePoint.newRangeQuery("west", Double.NEGATIVE_INFINITY, Double.parseDouble(coordinates[1]));
@@ -112,31 +145,47 @@ public class SearchFiles {
                             Query eastRangeQuery = DoublePoint.newRangeQuery("east", Double.parseDouble(coordinates[0]), Double.POSITIVE_INFINITY);
                             Query northRangeQuery = DoublePoint.newRangeQuery("north", Double.parseDouble(coordinates[2]), Double.POSITIVE_INFINITY);
 
-                            spatialQuery = new BooleanQuery.Builder().add(westRangeQuery, BooleanClause.Occur.MUST)
-                                                                     .add(southRangeQuery, BooleanClause.Occur.MUST)
-                                                                     .add(eastRangeQuery, BooleanClause.Occur.MUST)
-                                                                     .add(northRangeQuery, BooleanClause.Occur.MUST).build();
+                            BooleanQuery spatialQuery = new BooleanQuery.Builder().add(westRangeQuery, BooleanClause.Occur.MUST)
+                                                                                  .add(southRangeQuery, BooleanClause.Occur.MUST)
+                                                                                  .add(eastRangeQuery, BooleanClause.Occur.MUST)
+                                                                                  .add(northRangeQuery, BooleanClause.Occur.MUST).build();
+                            queries.add(spatialQuery, BooleanClause.Occur.SHOULD);
+                        }
 
-                            //showResults(searcher, boolQuery, ++i, resultsWriter);
-                        } else
-                            spatialQuery = null;
+                        Pattern pattern = Pattern.compile("\\[(\\d+|\\*) TO (\\d+|\\*)]");
+                        Pattern patternNR = Pattern.compile("(\\d+)");
+                        String date1, date2;
+                        Matcher numberMatcher1 = pattern.matcher(createdQueryStr);
+                        if (numberMatcher1.find()) {
+                            date1 = numberMatcher1.group(1);
+                            date2 = numberMatcher1.group(2);
+                            queries.add(TermRangeQuery.newStringRange("created", date1.equals("*")?null:date1, date2.equals("*")?null:date2, true, true), BooleanClause.Occur.SHOULD);
+                        }
+                        Matcher numberMatcher2 = pattern.matcher(issuedQueryStr);
+                        if (numberMatcher2.find()) {
+                            date1 = numberMatcher2.group(1);
+                            date2 = numberMatcher2.group(2);
+                            queries.add(TermRangeQuery.newStringRange("issued", date1.equals("*")?null:date1, date2.equals("*")?null:date2, true, true), BooleanClause.Occur.SHOULD);
+                        }
+                        Matcher numberMatcher3 = patternNR.matcher(createdNRQueryStr);
+                        if (numberMatcher3.find()) {
+                            date1 = numberMatcher3.group(1);
+                            queries.add(new TermQuery(new Term("created", date1)), BooleanClause.Occur.SHOULD);
+                        }
+                        Matcher numberMatcher4 = patternNR.matcher(issuedNRQueryStr);
+                        if (numberMatcher4.find()) {
+                            date1 = numberMatcher4.group(1);
+                            queries.add(new TermQuery(new Term("issued", date1)), BooleanClause.Occur.SHOULD);
+                        }
 
-                        if (!noSpatialQueryStr.isEmpty()) {
-
+                        if (!otherQueryStr.isEmpty()) {
                             // Parse query
                             parser = new QueryParser(queryStr, analyzer);
-                            noSpatialQuery = parser.parse(noSpatialQueryStr);
-                        } else
-                            noSpatialQuery = null;
-
-                        if (noSpatialQuery != null && spatialQuery == null)
-                            showResults(searcher, noSpatialQuery, ++i, resultsWriter);
-                        if (noSpatialQuery == null && spatialQuery != null)
-                            showResults(searcher, spatialQuery, ++i, resultsWriter);
-                        if (noSpatialQuery != null && spatialQuery != null) {
-                            BooleanQuery bothQueries = new BooleanQuery.Builder().add(noSpatialQuery, BooleanClause.Occur.SHOULD)
-                                                                                 .add(spatialQuery, BooleanClause.Occur.SHOULD).build();
+                            queries.add(parser.parse(otherQueryStr), BooleanClause.Occur.SHOULD);
                         }
+
+                        showResults(searcher, queries.build(), ++i, resultsWriter);
+
                     }
                 }
             }

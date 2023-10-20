@@ -118,15 +118,15 @@ public class IndexFiles {
     //  Applies a fixed field type to depending on the field name
     static void addData(String fieldName, NodeList elements, Document doc)
     {
-        boolean isTextField = !(fieldName.equals("dc:identifier") ||
-                fieldName.equals("dc:type") ||
-                fieldName.equals("dc:format") ||
-                fieldName.equals("dc:language") ||
-                fieldName.equals("dc:relation") ||
-                fieldName.equals("dc:rights") ||
-                fieldName.equals("dc:date") ||
-                fieldName.equals("dc:created") ||
-                fieldName.equals("dcterms:issued"));
+        boolean isTextField = !(fieldName.equals("identifier") ||
+                fieldName.equals("type") ||
+                fieldName.equals("format") ||
+                fieldName.equals("language") ||
+                fieldName.equals("relation") ||
+                fieldName.equals("rights") ||
+                fieldName.equals("date") ||
+                fieldName.equals("created") ||
+                fieldName.equals("issued"));
 
         for  (int i = 0; i < elements.getLength(); i++) {
             Element element = (Element) elements.item(i);
@@ -157,21 +157,21 @@ public class IndexFiles {
             throws IOException {
 
         String[] fieldNames = {
-                "dc:title",
-                "dc:identifier",
-                "dc:subject",
-                "dc:type",
-                "dc:description",
-                "dc:creator",
-                "dc:publisher",
-                "dc:format",
-                "dc:language",
-                "dc:contributor",
-                "dc:relation",
-                "dc:rights",
-                "dc:date",
-                "dc:created",
-                "dcterms:issued",
+                "title",
+                "identifier",
+                "subject",
+                "type",
+                "description",
+                "creator",
+                "publisher",
+                "format",
+                "language",
+                "contributor",
+                "relation",
+                "rights",
+                "date",
+                "created",
+                "issued",
         };
 
         // do not try to index files that cannot be read
@@ -215,7 +215,7 @@ public class IndexFiles {
                     NodeList elements;
                     for (String fieldName : fieldNames) {
                         // Traverse and manipulate the XML document
-                        elements = document.getElementsByTagName(fieldName);
+                        elements = document.getElementsByTagName(((fieldName.equals("issued")||fieldName.equals("created"))?"dcterms:":"dc:") + fieldName);
 
                         addData(fieldName, elements, doc);
 
