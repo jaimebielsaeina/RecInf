@@ -61,124 +61,40 @@ public class SearchFiles {
             System.exit(0);
         }
 
+        // Cargar el modelo POS en español
+        InputStream modelIn = new FileInputStream("es-pos-maxent.model");
+        POSModel posModel = new POSModel(modelIn);
 
+        // Inicializar el etiquetador POS
+        POSTaggerME posTagger = new POSTaggerME(posModel);
 
+        // Oración de ejemplo
+        String sentence = "Estoy interesado en mecanismos de comunicación entre procesos en " +
+                "entornos distribuidos. Preferiría ver descripciones de mecanismos completos, " +
+                "con o sin implementaciones, pero no trabajos teóricos sobre un problema " +
+                "abstracto. Remote procedure calls y message-passing son ejemplos de mis " +
+                "intereses.";
 
+        // Tokeniza la oración
+        String[] tokens = sentence.split(" ");
 
+        // Realiza el etiquetado gramatical
+        String[] tags = posTagger.tag(tokens);
 
+        List<String> sustantivos = new ArrayList<>();
+        List<String> adjetivos = new ArrayList<>();
 
+        for (int i = 0; i < tokens.length; i++) {
+            if (tags[i].startsWith("N")) {
+                sustantivos.add(tokens[i]);
 
-
-
-
-
-
-
-
-        // La necesidad de información original
-        String necesidadInformacion = "John is 26 years old. His best friend's name is Leonard. He has a sister named Penny.";
-
-        // Tokenización
-        SimpleTokenizer tokenizer = SimpleTokenizer.INSTANCE;
-        String[] tokens = tokenizer.tokenize(necesidadInformacion);
-
-        try {
-            InputStream inputStreamNameFinder = SearchFiles.class
-                    .getResourceAsStream("/models/en-ner-person.bin");
-            TokenNameFinderModel model = new TokenNameFinderModel(
-                    inputStreamNameFinder);
-            NameFinderME nameFinderME = new NameFinderME(model);
-            List<Span> spans = Arrays.asList(nameFinderME.find(tokens));
-
-            assert (spans.toString())
-                    .equals("[[0..1) person, [13..14) person, [20..21) person]");
-        } catch (Exception e) {
-            e.printStackTrace();
+                if (i < tokens.length - 1 && tags[i + 1].startsWith("A"))
+                    adjetivos.add(tokens[i + 1]);
+            }
         }
 
-        try {
-
-            // Provide the model name and language code
-            String modelName = "es-ner-misc";
-            String languageCode = "es";
-
-            // Define the URL for the model
-            String modelURL = "https://opennlp.sourceforge.net/models-1.5/" + modelName + ".bin";
-
-            // Open a connection to the model URL
-            URL url = new URL(modelURL);
-            URLConnection connection = url.openConnection();
-
-            // Create an input stream to read the model data
-            InputStream inputStream = connection.getInputStream();
-
-            // Specify where to save the model locally
-            File modelFile = new File("./" + modelName + ".bin");
-
-            // Create an output stream to write the model data
-            OutputStream outputStream = new FileOutputStream(modelFile);
-
-            // Copy data from the input stream to the output stream
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, bytesRead);
-            }
-
-            // Close streams
-            inputStream.close();
-            outputStream.close();
-
-            System.out.println("Model downloaded successfully to " + modelFile.getAbsolutePath());
-
-            // Cargar un modelo de reconocimiento de entidades nombradas (NER) previamente entrenado
-            TokenNameFinderModel model = new TokenNameFinderModel(new FileInputStream(modelFile)); // Reemplaza con tu modelo NER
-
-            // Inicializar el reconocedor de entidades nombradas con el modelo
-            NameFinderME nameFinder = new NameFinderME(model);
-            FileInputStream modelIS = new FileInputStream("es-pos-maxent.model");
-            POSTaggerME posTagger = new POSTaggerME(new POSModel(modelIS));
-
-            // Encontrar las entidades nombradas en el texto
-            String[] posTags = posTagger.tag(tokens);
-
-            for (int i = 0; i < tokens.length; i++) {
-                System.out.println("Token: " + tokens[i] + " - POS: " + posTags[i]);
-            }
-            /*// Crear una consulta booleana con las entidades encontradas
-            StringBuilder booleanQuery = new StringBuilder();
-            for (Span span : spans) {
-                System.out.println("Entidad: " + span.toString() + " - " + tokens[span.getStart()]);
-                //String entity = String.join(" ", tokens, span.getStart(), span.getEnd());
-                //System.out.println(entity);
-                //booleanQuery.append(entity).append(" OR ");
-            }*/
-
-            // Imprimir la consulta booleana resultante
-            //System.out.println("Consulta Booleana: " + booleanQuery.toString());
-            modelIS.close();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        // Cerrar el flujo del modelo
+        modelIn.close();
 
 
         String index = "";
