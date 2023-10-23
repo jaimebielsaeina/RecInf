@@ -73,7 +73,7 @@ public class IndexFiles {
             System.out.println("Indexing to directory '" + indexPath + "'...");
 
             Directory dir = FSDirectory.open(Paths.get(indexPath));
-            Analyzer analyzer = new StandardAnalyzer();
+            Analyzer analyzer = new SpanishAnalyzer2();
             IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
 
             if (create) {

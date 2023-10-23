@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -30,6 +31,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.queryparser.xml.builders.BooleanQueryBuilder;
 import org.apache.lucene.search.*;
@@ -39,6 +41,11 @@ import opennlp.tools.tokenize.SimpleTokenizer;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.namefind.TokenNameFinderModel;
 import opennlp.tools.util.Span;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+
+import javax.xml.parsers.DocumentBuilderFactory;
 
 /**
  * Simple command-line based search demo.
@@ -48,6 +55,46 @@ public class SearchFiles {
     public static final int INITIAL_HITS = 100;
 
     public SearchFiles() {
+    }
+
+    private static String transformString (String in) {
+        for (int k=0; k<in.length(); k++) {
+            switch (in.charAt(k)) {
+                case 193:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 201:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 205:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 211:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 218:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 220:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 209:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 225:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 233:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 237:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 243:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 250:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 252:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 241:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 161:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                case 191:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+            }
+        }
+        return in;
     }
 
     /**
@@ -61,40 +108,10 @@ public class SearchFiles {
             System.exit(0);
         }
 
-        // Cargar el modelo POS en español
-        InputStream modelIn = new FileInputStream("es-pos-maxent.model");
-        POSModel posModel = new POSModel(modelIn);
 
-        // Inicializar el etiquetador POS
-        POSTaggerME posTagger = new POSTaggerME(posModel);
 
-        // Oración de ejemplo
-        String sentence = "Estoy interesado en mecanismos de comunicación entre procesos en " +
-                "entornos distribuidos. Preferiría ver descripciones de mecanismos completos, " +
-                "con o sin implementaciones, pero no trabajos teóricos sobre un problema " +
-                "abstracto. Remote procedure calls y message-passing son ejemplos de mis " +
-                "intereses.";
 
-        // Tokeniza la oración
-        String[] tokens = sentence.split(" ");
 
-        // Realiza el etiquetado gramatical
-        String[] tags = posTagger.tag(tokens);
-
-        List<String> sustantivos = new ArrayList<>();
-        List<String> adjetivos = new ArrayList<>();
-
-        for (int i = 0; i < tokens.length; i++) {
-            if (tags[i].startsWith("N")) {
-                sustantivos.add(tokens[i]);
-
-                if (i < tokens.length - 1 && tags[i + 1].startsWith("A"))
-                    adjetivos.add(tokens[i + 1]);
-            }
-        }
-
-        // Cerrar el flujo del modelo
-        modelIn.close();
 
 
         String index = "";
@@ -119,20 +136,102 @@ public class SearchFiles {
         // Create processing classes
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get(index)));
         IndexSearcher searcher = new IndexSearcher(reader);
-        Analyzer analyzer = new StandardAnalyzer();
+        Analyzer analyzer = new SpanishAnalyzer2();
 
         System.out.println("Processing queries in file " + queryFile + ".");
 
-        try {
-            BufferedReader queriesReader = new BufferedReader(new FileReader(queryFile, StandardCharsets.UTF_8));
-            BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(outFile));
-            String queryStr;
-            QueryParser parser;
-            int i = 0;
-            BooleanQuery.Builder queries;
 
-            // For each query
-            while ((queryStr = queriesReader.readLine()) != null) {
+        BooleanQuery.Builder queries;
+        String queryStr;
+        QueryParser parser;
+
+        try {
+
+            // Cargar el modelo POS en español
+            InputStream modelIn = new FileInputStream("es-pos-maxent.model");
+            POSModel posModel = new POSModel(modelIn);
+
+            // Inicializar el etiquetador POS
+            POSTaggerME posTagger = new POSTaggerME(posModel);
+
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setValidating(false);
+            factory.setIgnoringElementContentWhitespace(true);
+            factory.setIgnoringComments(true);
+            factory.setNamespaceAware(true);
+
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(queryFile), StandardCharsets.UTF_8));
+            String asd;
+            while ((asd=in.readLine()) != null)
+                System.out.println(asd);
+            in.close();
+
+            org.w3c.dom.Document document = factory.newDocumentBuilder().parse(new InputSource(new InputStreamReader(new FileInputStream(queryFile), StandardCharsets.UTF_8)));
+            System.out.println(document.getDocumentElement().getTextContent());
+            NodeList infoNeeds = document.getElementsByTagName("informationNeed");
+
+            System.out.println(infoNeeds.getLength());
+            BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(outFile));
+
+            for (int i = 0; i < infoNeeds.getLength(); i++) {
+                System.out.println(i);
+                Element infoNeed = (Element) infoNeeds.item(i);
+                NodeList infoNeedIdentifier = infoNeed.getElementsByTagName("identifier");
+                if (infoNeedIdentifier.getLength() != 1) continue;
+                String identifier = infoNeedIdentifier.item(0).getTextContent();
+                System.out.println(identifier);
+                NodeList infoNeedText = infoNeed.getElementsByTagName("text");
+                if (infoNeedText.getLength() != 1) continue;
+                String text = infoNeedText.item(0).getTextContent();
+                System.out.println(text);
+
+                // Tokeniza la oración
+                String[] tokens = text.split(" ");
+
+                // Realiza el etiquetado gramatical
+                String[] tags = posTagger.tag(tokens);
+
+                List<String> sustantivos = new ArrayList<>();
+                List<String> adjetivos = new ArrayList<>();
+
+                for (int j = 0; j < tokens.length; j++) {
+                    if (tags[j].startsWith("N")) {
+                        sustantivos.add(tokens[j]);
+
+                        if (j < tokens.length - 1 && tags[j + 1].startsWith("A"))
+                            adjetivos.add(tokens[j + 1]);
+                    }
+                }
+
+                for (String tag : sustantivos) {
+                    tag = transformString(tag);
+                    System.out.println(tag);
+                    /*for (int k=0; k<tag.length(); k++)
+                        if (tag.charAt(k) > 128)
+                            System.out.println("letra rara" + (int)tag.charAt(k));*/
+                }
+                for (String tag : adjetivos) {
+                    tag = transformString(tag);
+                    System.out.println(tag);
+                    /*for (int k=0; k<tag.length(); k++)
+                        if (tag.charAt(k) > 128)
+                            System.out.println("letra rara" + (int)tag.charAt(k));*/
+                }
+
+
+
+
+                /*BufferedReader queriesReader = new BufferedReader(new FileReader(queryFile, StandardCharsets.UTF_8));
+                BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(outFile));
+                String queryStr;
+                QueryParser parser;
+                int i = 0;
+                BooleanQuery.Builder queries;
+
+                // For each query
+                while ((queryStr = queriesReader.readLine()) != null) {*/
+                queryStr = text;
                 queries = new BooleanQuery.Builder();
                 if (!queryStr.isEmpty()) {
                     // Clean query
@@ -195,9 +294,9 @@ public class SearchFiles {
                             Query northRangeQuery = DoublePoint.newRangeQuery("north", Double.parseDouble(coordinates[2]), Double.POSITIVE_INFINITY);
 
                             BooleanQuery spatialQuery = new BooleanQuery.Builder().add(westRangeQuery, BooleanClause.Occur.MUST)
-                                                                                  .add(southRangeQuery, BooleanClause.Occur.MUST)
-                                                                                  .add(eastRangeQuery, BooleanClause.Occur.MUST)
-                                                                                  .add(northRangeQuery, BooleanClause.Occur.MUST).build();
+                                    .add(southRangeQuery, BooleanClause.Occur.MUST)
+                                    .add(eastRangeQuery, BooleanClause.Occur.MUST)
+                                    .add(northRangeQuery, BooleanClause.Occur.MUST).build();
                             queries.add(spatialQuery, BooleanClause.Occur.SHOULD);
                         }
 
@@ -208,13 +307,13 @@ public class SearchFiles {
                         if (numberMatcher1.find()) {
                             date1 = numberMatcher1.group(1);
                             date2 = numberMatcher1.group(2);
-                            queries.add(TermRangeQuery.newStringRange("created", date1.equals("*")?null:date1, date2.equals("*")?null:date2, true, true), BooleanClause.Occur.SHOULD);
+                            queries.add(TermRangeQuery.newStringRange("created", date1.equals("*") ? null : date1, date2.equals("*") ? null : date2, true, true), BooleanClause.Occur.SHOULD);
                         }
                         Matcher numberMatcher2 = pattern.matcher(issuedQueryStr);
                         if (numberMatcher2.find()) {
                             date1 = numberMatcher2.group(1);
                             date2 = numberMatcher2.group(2);
-                            queries.add(TermRangeQuery.newStringRange("issued", date1.equals("*")?null:date1, date2.equals("*")?null:date2, true, true), BooleanClause.Occur.SHOULD);
+                            queries.add(TermRangeQuery.newStringRange("issued", date1.equals("*") ? null : date1, date2.equals("*") ? null : date2, true, true), BooleanClause.Occur.SHOULD);
                         }
                         Matcher numberMatcher3 = patternNR.matcher(createdNRQueryStr);
                         if (numberMatcher3.find()) {
@@ -226,20 +325,26 @@ public class SearchFiles {
                             date1 = numberMatcher4.group(1);
                             queries.add(new TermQuery(new Term("issued", date1)), BooleanClause.Occur.SHOULD);
                         }
+                        otherQueryStr = "natura";
 
                         if (!otherQueryStr.isEmpty()) {
                             // Parse query
-                            parser = new QueryParser(queryStr, analyzer);
+                            parser = new QueryParser(otherQueryStr, analyzer);
                             queries.add(parser.parse(otherQueryStr), BooleanClause.Occur.SHOULD);
                         }
+                        queries.add(new MultiFieldQueryParser(new Term("natura")), BooleanClause.Occur.SHOULD);
 
-                        showResults(searcher, queries.build(), ++i, resultsWriter);
+                        showResults(searcher, queries.build(), identifier, resultsWriter);
 
                     }
                 }
             }
-            queriesReader.close();
+            //queriesReader.close();
             resultsWriter.close();
+
+            // Cerrar el flujo del modelo
+            modelIn.close();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -257,7 +362,7 @@ public class SearchFiles {
      * Typical procedure to show the results of a query. For performance issues, the list of results is usually limited to a maximum around 1,000 records.
      * More details at https://lucene.apache.org/core/9_7_0/core/org/apache/lucene/search/IndexSearcher.html
      */
-    public static void showResults(IndexSearcher searcher, Query query, int order, BufferedWriter outFile) throws IOException {
+    public static void showResults(IndexSearcher searcher, Query query, String searchIdentifier, BufferedWriter outFile) throws IOException {
         // Execute query
         TopDocs results = searcher.search(query, INITIAL_HITS);
         int numTotalHits = Math.toIntExact(results.totalHits.value);
@@ -277,7 +382,7 @@ public class SearchFiles {
 
                 // Print document identifyer
                 if (path != null) {
-                    outFile.write(order + "\t" + doc.get("identifier") + "\n");
+                    outFile.write(searchIdentifier + "\t" + doc.get("identifier") + "\n");
                 }
             }
         }
