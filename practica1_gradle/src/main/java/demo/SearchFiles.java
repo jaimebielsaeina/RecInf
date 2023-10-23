@@ -1,46 +1,24 @@
 package demo;
 
 import java.io.*;
-import java.net.URL;
-import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
 import opennlp.tools.postag.POSModel;
 import opennlp.tools.postag.POSTaggerME;
-import opennlp.tools.util.model.BaseModel;
-import opennlp.tools.util.model.UncloseableInputStream;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.es.SpanishAnalyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.StoredFields;
-import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
-import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.queryparser.xml.builders.BooleanQueryBuilder;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
 
-import opennlp.tools.tokenize.SimpleTokenizer;
-import opennlp.tools.namefind.NameFinderME;
-import opennlp.tools.namefind.TokenNameFinderModel;
-import opennlp.tools.util.Span;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -57,39 +35,43 @@ public class SearchFiles {
     public SearchFiles() {
     }
 
+    /**
+     * Transforms a string, converting Spanish special symbols into non-special ones.
+     * @param in String to transformed.
+     * @return Transformed string.
+     */
     private static String transformString (String in) {
+        // For each character:
         for (int k=0; k<in.length(); k++) {
+            // If it's special, it's changed for a non-special one.
             switch (in.charAt(k)) {
                 case 193:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "A"); break;
                 case 201:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "E"); break;
                 case 205:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "I"); break;
                 case 211:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "O"); break;
                 case 218:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
                 case 220:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "U"); break;
                 case 209:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "N"); break;
                 case 225:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "a"); break;
                 case 233:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "e"); break;
                 case 237:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "i"); break;
                 case 243:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "o"); break;
                 case 250:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
                 case 252:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "u"); break;
                 case 241:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+                    in = in.replaceAll(in.substring(k, k+1), "n"); break;
                 case 161:
-                    in = in.replaceAll(in.substring(k, k+1), ""); break;
                 case 191:
                     in = in.replaceAll(in.substring(k, k+1), ""); break;
             }
@@ -108,16 +90,10 @@ public class SearchFiles {
             System.exit(0);
         }
 
-
-
-
-
-
-
+        // Getting the parameters.
         String index = "";
         String queryFile = "";
         String outFile = "";
-
         for (int i = 0; i < args.length; i++) {
             if ("-index".equals(args[i])) {
                 index = args[++i];
@@ -128,215 +104,171 @@ public class SearchFiles {
             }
         }
 
+        // Exiting if one of the parameters was not provided.
         if (index.isEmpty() || queryFile.isEmpty() || outFile.isEmpty()) {
             System.out.println("Please provide index and query files as well as the results file properly.");
             System.exit(1);
         }
 
-        // Create processing classes
+        System.out.println("Processing queries in file " + queryFile + ".");
+
+        // Create processing classes.
         IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths.get(index)));
         IndexSearcher searcher = new IndexSearcher(reader);
         Analyzer analyzer = new SpanishAnalyzer2();
-
-        System.out.println("Processing queries in file " + queryFile + ".");
-
-
         BooleanQuery.Builder queries;
         String queryStr;
-        QueryParser parser;
 
         try {
 
-            // Cargar el modelo POS en español
+            // Loading Spanish POS model.
             InputStream modelIn = new FileInputStream("es-pos-maxent.model");
             POSModel posModel = new POSModel(modelIn);
 
-            // Inicializar el etiquetador POS
+            // Initializing POS tagging.
             POSTaggerME posTagger = new POSTaggerME(posModel);
 
+            // Parsing XML file.
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setValidating(false);
-            factory.setIgnoringElementContentWhitespace(true);
-            factory.setIgnoringComments(true);
-            factory.setNamespaceAware(true);
-
-
-            BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(queryFile), StandardCharsets.UTF_8));
-            String asd;
-            while ((asd=in.readLine()) != null)
-                System.out.println(asd);
-            in.close();
-
             org.w3c.dom.Document document = factory.newDocumentBuilder().parse(new InputSource(new InputStreamReader(new FileInputStream(queryFile), StandardCharsets.UTF_8)));
-            System.out.println(document.getDocumentElement().getTextContent());
             NodeList infoNeeds = document.getElementsByTagName("informationNeed");
 
-            System.out.println(infoNeeds.getLength());
+            // Creating file where results will be written.
             BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(outFile));
 
+            // For each information need:
             for (int i = 0; i < infoNeeds.getLength(); i++) {
-                System.out.println(i);
+
+                // Getting the identifier and the text of the info. need.
                 Element infoNeed = (Element) infoNeeds.item(i);
+
                 NodeList infoNeedIdentifier = infoNeed.getElementsByTagName("identifier");
                 if (infoNeedIdentifier.getLength() != 1) continue;
                 String identifier = infoNeedIdentifier.item(0).getTextContent();
                 System.out.println(identifier);
+
                 NodeList infoNeedText = infoNeed.getElementsByTagName("text");
                 if (infoNeedText.getLength() != 1) continue;
                 String text = infoNeedText.item(0).getTextContent();
-                System.out.println(text);
 
-                // Tokeniza la oración
-                String[] tokens = text.split(" ");
-
-                // Realiza el etiquetado gramatical
-                String[] tags = posTagger.tag(tokens);
-
-                List<String> sustantivos = new ArrayList<>();
-                List<String> adjetivos = new ArrayList<>();
-
-                for (int j = 0; j < tokens.length; j++) {
-                    if (tags[j].startsWith("N")) {
-                        sustantivos.add(tokens[j]);
-
-                        if (j < tokens.length - 1 && tags[j + 1].startsWith("A"))
-                            adjetivos.add(tokens[j + 1]);
-                    }
-                }
-
-                for (String tag : sustantivos) {
-                    tag = transformString(tag);
-                    System.out.println(tag);
-                    /*for (int k=0; k<tag.length(); k++)
-                        if (tag.charAt(k) > 128)
-                            System.out.println("letra rara" + (int)tag.charAt(k));*/
-                }
-                for (String tag : adjetivos) {
-                    tag = transformString(tag);
-                    System.out.println(tag);
-                    /*for (int k=0; k<tag.length(); k++)
-                        if (tag.charAt(k) > 128)
-                            System.out.println("letra rara" + (int)tag.charAt(k));*/
-                }
-
-
-
-
-                /*BufferedReader queriesReader = new BufferedReader(new FileReader(queryFile, StandardCharsets.UTF_8));
-                BufferedWriter resultsWriter = new BufferedWriter(new FileWriter(outFile));
-                String queryStr;
-                QueryParser parser;
-                int i = 0;
-                BooleanQuery.Builder queries;
-
-                // For each query
-                while ((queryStr = queriesReader.readLine()) != null) {*/
                 queryStr = text;
                 queries = new BooleanQuery.Builder();
-                if (!queryStr.isEmpty()) {
-                    // Clean query
-                    queryStr = queryStr.trim();
-                    if (!queryStr.isEmpty()) {
 
-                        // Create a Pattern object for the spatial regular expression
-                        Pattern regex1 = Pattern.compile("spatial:-?\\d+.\\d+,-?\\d+.\\d+,-?\\d+.\\d+,-?\\d+.\\d+");
-                        Pattern regex2 = Pattern.compile("created:\\[(\\d+|\\*) TO (\\d+|\\*)]");
-                        Pattern regex3 = Pattern.compile("issued:\\[(\\d+|\\*) TO (\\d+|\\*)]");
-                        Pattern regex4 = Pattern.compile("created:\\d+");
-                        Pattern regex5 = Pattern.compile("issued:\\d+");
+                // Tokenize the phrase.
+                String[] tokens = text.split(" ");
+                for (int k=0; k<tokens.length; k++)
+                    tokens[k] = transformString(tokens[k]);
 
-                        // Create a Matcher object to find matches in the query string
-                        Matcher matcher1 = regex1.matcher(queryStr);
-                        Matcher matcher2 = regex2.matcher(queryStr);
-                        Matcher matcher3 = regex3.matcher(queryStr);
-                        Matcher matcher4 = regex4.matcher(queryStr);
-                        Matcher matcher5 = regex5.matcher(queryStr);
+                // Initialize two StringBuilder objects to store the tokens in separate fields.
+                StringBuilder noField = new StringBuilder();
+                StringBuilder restField = new StringBuilder();
 
-                        String spatialQueryStr = "";
-                        String createdQueryStr = "";
-                        String issuedQueryStr = "";
-                        String createdNRQueryStr = "";
-                        String issuedNRQueryStr = "";
-                        String otherQueryStr = queryStr; // Initialize with the original query
+                boolean noFound = false;
+                String token;
 
-                        // Check if the spatial part is found and extract it
-                        if (matcher1.find()) {
-                            spatialQueryStr = matcher1.group(0);
-                            // Remove the spatial part from the rest
-                            otherQueryStr = otherQueryStr.replaceFirst("spatial:-?\\d+.\\d+,-?\\d+.\\d+,-?\\d+.\\d+,-?\\d+.\\d+", "").trim();
+                for (int j=0; j<tokens.length; j++) {
+                    token = tokens[j];
+                    // If there's a "no" word, do a signal.
+                    if (token.equalsIgnoreCase("no")) {
+                        noFound = true;
+                        noField.append(token).append(" ");
+                    // If the phrase ends, any negation will end.
+                    } else if (token.endsWith(",") || token.endsWith(".")) {
+                        if (noFound) {
+                            noField.append(token);
+                        } else {
+                            restField.append(token).append(" ");
                         }
-                        if (matcher2.find()) {
-                            createdQueryStr = matcher2.group(0);
-                            // Remove the spatial part from the rest
-                            otherQueryStr = otherQueryStr.replaceFirst("created:\\[(\\d+|\\*) TO (\\d+|\\*)]", "").trim();
+                        noFound = false;
+                    // If there's a period in the phrase, do a date restriction over the query.
+                    } else if (token.equalsIgnoreCase("entre") && tokens.length > j+3) {
+                        String term1 = tokens[j+1].replaceAll("\\p{Punct}", "");
+                        String term2 = tokens[j+2].replaceAll("\\p{Punct}", "");
+                        String term3 = tokens[j+3].replaceAll("\\p{Punct}", "");
+                        if (term1.matches("[0-9]+") &&
+                            term2.equalsIgnoreCase("y") &&
+                            term3.matches("[0-9]+")) {
+                            queries.add(TermRangeQuery.newStringRange("date", term1, term3, true, true), BooleanClause.Occur.MUST);
+                            j += 3;
                         }
-                        if (matcher3.find()) {
-                            issuedQueryStr = matcher3.group(0);
-                            // Remove the spatial part from the rest
-                            otherQueryStr = otherQueryStr.replaceFirst("issued:\\[(\\d+|\\*) TO (\\d+|\\*)]", "").trim();
+                    } else {
+                        // If there was a "no" before, mark the word not to appear on the results.
+                        if (noFound) {
+                            noField.append(token).append(" ");
+                        // Else, mark the word to appear on the results.
+                        } else {
+                            restField.append(token).append(" ");
                         }
-                        if (matcher4.find()) {
-                            createdNRQueryStr = matcher4.group(0);
-                            // Remove the spatial part from the rest
-                            otherQueryStr = otherQueryStr.replaceFirst("created:\\d+", "").trim();
-                        }
-                        if (matcher5.find()) {
-                            issuedNRQueryStr = matcher5.group(0);
-                            // Remove the spatial part from the rest
-                            otherQueryStr = otherQueryStr.replaceFirst("issued:\\d+", "").trim();
-                        }
-
-                        if (!spatialQueryStr.isEmpty()) {
-                            String[] coordinates = queryStr.substring(8).split(" ")[0].split(",");
-                            Query westRangeQuery = DoublePoint.newRangeQuery("west", Double.NEGATIVE_INFINITY, Double.parseDouble(coordinates[1]));
-                            Query southRangeQuery = DoublePoint.newRangeQuery("south", Double.NEGATIVE_INFINITY, Double.parseDouble(coordinates[3]));
-                            Query eastRangeQuery = DoublePoint.newRangeQuery("east", Double.parseDouble(coordinates[0]), Double.POSITIVE_INFINITY);
-                            Query northRangeQuery = DoublePoint.newRangeQuery("north", Double.parseDouble(coordinates[2]), Double.POSITIVE_INFINITY);
-
-                            BooleanQuery spatialQuery = new BooleanQuery.Builder().add(westRangeQuery, BooleanClause.Occur.MUST)
-                                    .add(southRangeQuery, BooleanClause.Occur.MUST)
-                                    .add(eastRangeQuery, BooleanClause.Occur.MUST)
-                                    .add(northRangeQuery, BooleanClause.Occur.MUST).build();
-                            queries.add(spatialQuery, BooleanClause.Occur.SHOULD);
-                        }
-
-                        Pattern pattern = Pattern.compile("\\[(\\d+|\\*) TO (\\d+|\\*)]");
-                        Pattern patternNR = Pattern.compile("(\\d+)");
-                        String date1, date2;
-                        Matcher numberMatcher1 = pattern.matcher(createdQueryStr);
-                        if (numberMatcher1.find()) {
-                            date1 = numberMatcher1.group(1);
-                            date2 = numberMatcher1.group(2);
-                            queries.add(TermRangeQuery.newStringRange("created", date1.equals("*") ? null : date1, date2.equals("*") ? null : date2, true, true), BooleanClause.Occur.SHOULD);
-                        }
-                        Matcher numberMatcher2 = pattern.matcher(issuedQueryStr);
-                        if (numberMatcher2.find()) {
-                            date1 = numberMatcher2.group(1);
-                            date2 = numberMatcher2.group(2);
-                            queries.add(TermRangeQuery.newStringRange("issued", date1.equals("*") ? null : date1, date2.equals("*") ? null : date2, true, true), BooleanClause.Occur.SHOULD);
-                        }
-                        Matcher numberMatcher3 = patternNR.matcher(createdNRQueryStr);
-                        if (numberMatcher3.find()) {
-                            date1 = numberMatcher3.group(1);
-                            queries.add(new TermQuery(new Term("created", date1)), BooleanClause.Occur.SHOULD);
-                        }
-                        Matcher numberMatcher4 = patternNR.matcher(issuedNRQueryStr);
-                        if (numberMatcher4.find()) {
-                            date1 = numberMatcher4.group(1);
-                            queries.add(new TermQuery(new Term("issued", date1)), BooleanClause.Occur.SHOULD);
-                        }
-                        otherQueryStr = "natura";
-
-                        if (!otherQueryStr.isEmpty()) {
-                            // Parse query
-                            parser = new QueryParser(otherQueryStr, analyzer);
-                            queries.add(parser.parse(otherQueryStr), BooleanClause.Occur.SHOULD);
-                        }
-                        queries.add(new MultiFieldQueryParser(new Term("natura")), BooleanClause.Occur.SHOULD);
-
-                        showResults(searcher, queries.build(), identifier, resultsWriter);
-
                     }
+                }
+
+                // Convert the StringBuilder objects to strings.
+                String noString = noField.toString().trim();
+                String restString = restField.toString().trim();
+
+                String[] restTokens = restString.split(" ");
+                String[] noTokens = noString.split(" ");
+
+                // Grammatical tagging.
+                String[] noTags = posTagger.tag(noTokens);
+                String[] restTags = posTagger.tag(restTokens);
+
+                // Makes lists containing names that should/mustn't be included.
+                List<String> sustantivos = new ArrayList<>();
+                List<String> adjetivos = new ArrayList<>();
+                List<String> noSustantivos = new ArrayList<>();
+                List<String> noAdjetivos = new ArrayList<>();
+                for (int j = 0; j < restTokens.length; j++) {
+                    if (restTags[j].startsWith("N")) {
+                        sustantivos.add(restTokens[j]);
+                        if (j < restTokens.length - 1 && restTags[j + 1].startsWith("A"))
+                            adjetivos.add(restTokens[j + 1]);
+                    }
+                }
+                for (int j = 0; j < noTokens.length; j++) {
+                    if (noTags[j].startsWith("N")) {
+                        noSustantivos.add(noTokens[j]);
+
+                        if (j < noTokens.length - 1 && noTags[j + 1].startsWith("A"))
+                            noAdjetivos.add(noTokens[j + 1]);
+                    }
+                }
+
+                if (!queryStr.isEmpty()) {
+                    String[] data = {
+                            "title",
+                            "identifier",
+                            "subject",
+                            "type",
+                            "description",
+                            "creator",
+                            "publisher",
+                            "format",
+                            "language",
+                            "contributor",
+                            "relation",
+                            "rights",
+                            "date",
+                            "created",
+                            "issued",
+                    };
+
+                    // Building strings for que queries.
+                    String shouldContain = "";
+                    String mustntContain = "";
+                    for (String s : sustantivos) shouldContain = shouldContain.concat(" " + s);
+                    for (String a : adjetivos) shouldContain = shouldContain.concat(" " + a);
+                    for (String s : noSustantivos) mustntContain = mustntContain.concat(" " + s);
+                    for (String a : noAdjetivos) mustntContain = mustntContain.concat(" " + a);
+                    // Query with the words that documents should contain.
+                    queries.add(new MultiFieldQueryParser(data, analyzer).parse(shouldContain.trim()), BooleanClause.Occur.SHOULD);
+                    // Query with the words that documents mustn't contain.
+                    if (!mustntContain.isEmpty())
+                        queries.add(new MultiFieldQueryParser(data, analyzer).parse(mustntContain.trim()), BooleanClause.Occur.MUST_NOT);
+
+                    // Show results as usual.
+                    showResults(searcher, queries.build(), identifier, resultsWriter);
+
                 }
             }
             //queriesReader.close();

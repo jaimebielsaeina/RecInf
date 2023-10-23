@@ -1,8 +1,6 @@
 package demo;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.es.SpanishAnalyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
@@ -16,13 +14,9 @@ import javax.xml.parsers.DocumentBuilder;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -114,8 +108,14 @@ public class IndexFiles {
         }
     }
 
-    // Adds a field to a Lucene document, using elements as content and fieldName as field name
-    //  Applies a fixed field type to depending on the field name
+    /**
+     * Adds a field to a Lucene document, using elements as content and fieldName as field name.
+     * Applies a fixed field type to depending on the field name.
+     *
+     * @param fieldName Name of the field(s) to add.
+     * @param elements Value(s) of the field(s) to add.
+     * @param doc Document in which the field(s) will be added.
+     */
     static void addData(String fieldName, NodeList elements, Document doc)
     {
         boolean isTextField = !(fieldName.equals("identifier") ||
@@ -136,12 +136,13 @@ public class IndexFiles {
                 value = value.replace("-", "");
             }
 
+            // Saving the field with the corresponding name. Identifier must be remembered.
             if (isTextField)
-                doc.add(new TextField(fieldName, value, Field.Store.NO));
+                doc.add(new TextField(fieldName, transformString(value), Field.Store.NO));
             else if (fieldName.equals("identifier"))
-                doc.add(new StringField(fieldName, value, Field.Store.YES));
+                doc.add(new StringField(fieldName, transformString(value), Field.Store.YES));
             else
-                doc.add(new StringField(fieldName, value, Field.Store.NO));
+                doc.add(new StringField(fieldName, transformString(value), Field.Store.NO));
         }
     }
 
@@ -174,11 +175,11 @@ public class IndexFiles {
                 "issued",
         };
 
-        // do not try to index files that cannot be read
+        // Do not try to index files that cannot be read.
         if (file.canRead()) {
             if (file.isDirectory()) {
                 String[] files = file.list();
-                // an IO error could occur
+                // An IO error could occur.
                 if (files != null) {
                     List<String> fileList = new LinkedList<String>(Arrays.asList(files));
                     Collections.sort(fileList);
@@ -188,101 +189,52 @@ public class IndexFiles {
                 }
             } else {
 
-                FileInputStream fis;
-
                 try {
-                    //fis = new FileInputStream(file);
-                    // Create a DocumentBuilderFactory
+                    // Create a DocumentBuilderFactory.
                     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 
-                    // Create a DocumentBuilder
+                    // Create a DocumentBuilder.
                     DocumentBuilder builder = factory.newDocumentBuilder();
 
-                    // Parse the XML file
+                    // Parse the XML file.
                     org.w3c.dom.Document document = builder.parse(file);
 
-                    // Get the root element
-                    //Element root = document.getDocumentElement();
-
-
-                    // make a new, empty document
+                    // make a new, empty document.
                     Document doc = new Document();
                     Field pathField = new StringField("path", file.getPath(), Field.Store.YES);
                     doc.add(pathField);
                     doc.add(new StoredField("modified", file.lastModified()));
-                    //doc.add(new TextField("contents", new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8))));
 
                     NodeList elements;
                     for (String fieldName : fieldNames) {
-                        // Traverse and manipulate the XML document
+                        // Traverse and manipulate the XML document.
                         elements = document.getElementsByTagName(((fieldName.equals("issued")||fieldName.equals("created"))?"dcterms:":"dc:") + fieldName);
 
                         addData(fieldName, elements, doc);
-
-//                        if (writer.getConfig().getOpenMode() == OpenMode.CREATE) {
-//                            // New index, so we just add the document (no old document can be there):
-//                            System.out.println("adding " + file);
-//                            writer.addDocument(doc);
-//                        } else {
-//                            // Existing index (an old copy of this document may have been indexed) so
-//                            // we use updateDocument instead to replace the old one matching the exact
-//                            // path, if present:
-//                            System.out.println("updating " + file);
-//                            writer.updateDocument(new Term("path", file.getPath()), doc);
-//                        }
                     }
 
+                    // Saving document coordinates.
                     String value;
                     String[] fields;
                     NodeList boundingBoxes = document.getElementsByTagName("ows:BoundingBox");
-                    //System.out.println(boundingBoxes.getLength());
+                    // If one Bounding is found, it will be saved too into the index.
                     if (boundingBoxes.getLength() == 1) {
                         elements = ((Element)boundingBoxes.item(0)).getElementsByTagName("ows:LowerCorner");
-                        //System.out.println((elements.getLength()));
                         if (elements.getLength() == 1) {
                             value = elements.item(0).getTextContent();
                             fields = value.split(" ");
-                            //System.out.println((Double.parseDouble(fields[0])));
-                            //System.out.println((Double.parseDouble(fields[1])));
                             doc.add(new DoublePoint("west", Double.parseDouble(fields[0])));
                             doc.add(new DoublePoint("south", Double.parseDouble(fields[1])));
                         }
                         elements = ((Element)boundingBoxes.item(0)).getElementsByTagName("ows:UpperCorner");
-                        //System.out.println((elements.getLength()));
                         if (elements.getLength() == 1) {
                             value = elements.item(0).getTextContent();
                             fields = value.split(" ");
-                            //System.out.println((Double.parseDouble(fields[0])));
-                            //System.out.println((Double.parseDouble(fields[1])));
                             doc.add(new DoublePoint("east", Double.parseDouble(fields[0])));
                             doc.add(new DoublePoint("north", Double.parseDouble(fields[1])));
                         }
                     }
 
-
-                    /*
-                    // Add the path of the file as a field named "path".  Use a
-                    // field that is indexed (i.e. searchable), but don't tokenize
-                    // the field into separate words and don't index term frequency
-                    // or positional information:
-                    Field pathField = new StringField("path", file.getPath(), Field.Store.YES);
-                    doc.add(pathField);
-
-                    // Add the last modified date of the file a field named "modified".
-                    // Use a StoredField to return later its value as a response to a query.
-                    // This indexes to milli-second resolution, which
-                    // is often too fine.  You could instead create a number based on
-                    // year/month/day/hour/minutes/seconds, down the resolution you require.
-                    // For example the long value 2011021714 would mean
-                    // February 17, 2011, 2-3 PM.
-                    doc.add(new StoredField("modified", file.lastModified()));
-
-                    // Add the contents of the file to a field named "contents".  Specify a Reader,
-                    // so that the text of the file is tokenized and indexed, but not stored.
-                    // Note that FileReader expects the file to be in UTF-8 encoding.
-                    // If that's not the case searching for special characters will fail.
-                    doc.add(new TextField("contents", new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8))));
-*/
                     if (writer.getConfig().getOpenMode() == OpenMode.CREATE) {
                         // New index, so we just add the document (no old document can be there):
                         System.out.println("adding " + file);
@@ -301,10 +253,52 @@ public class IndexFiles {
                     return;
                 } catch (Exception e) {
                     e.printStackTrace();
-                } finally {
-                    //fis.close();
                 }
             }
         }
+    }
+
+    /**
+     * Transforms a string, converting Spanish special symbols into non-special ones.
+     * @param in String to transformed.
+     * @return Transformed string.
+     */
+    private static String transformString (String in) {
+        // For each character:
+        for (int k=0; k<in.length(); k++) {
+            // If it's special, it's changed for a non-special one.
+            switch (in.charAt(k)) {
+                case 193:
+                    in = in.replaceAll(in.substring(k, k+1), "A"); break;
+                case 201:
+                    in = in.replaceAll(in.substring(k, k+1), "E"); break;
+                case 205:
+                    in = in.replaceAll(in.substring(k, k+1), "I"); break;
+                case 211:
+                    in = in.replaceAll(in.substring(k, k+1), "O"); break;
+                case 218:
+                case 220:
+                    in = in.replaceAll(in.substring(k, k+1), "U"); break;
+                case 209:
+                    in = in.replaceAll(in.substring(k, k+1), "N"); break;
+                case 225:
+                    in = in.replaceAll(in.substring(k, k+1), "a"); break;
+                case 233:
+                    in = in.replaceAll(in.substring(k, k+1), "e"); break;
+                case 237:
+                    in = in.replaceAll(in.substring(k, k+1), "i"); break;
+                case 243:
+                    in = in.replaceAll(in.substring(k, k+1), "o"); break;
+                case 250:
+                case 252:
+                    in = in.replaceAll(in.substring(k, k+1), "u"); break;
+                case 241:
+                    in = in.replaceAll(in.substring(k, k+1), "n"); break;
+                case 161:
+                case 191:
+                    in = in.replaceAll(in.substring(k, k+1), ""); break;
+            }
+        }
+        return in;
     }
 }

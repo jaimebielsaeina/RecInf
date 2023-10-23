@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><informationNeeds>
     <informationNeed>
-        <identifier>3</identifier>
-        <text>Estoy interesado en mecanismos de comunicación entre procesos en entornos distribuidos. Preferiría ver descripciones de mecanismos completos, con o sin implementaciones, pero no trabajos teóricos sobre un problema abstracto. Remote procedure calls y message-passing son ejemplos de mis intereses.</text>
-    </informationNeed>
-    <informationNeed>
         <identifier>101-4</identifier>
         <text>¿Hay trabajos de fin de grado o trabajos de fin de master que traten sobre la animación o visión por computador publicados en los últimos 20 años, en lenguaje español?</text>
     </informationNeed>
