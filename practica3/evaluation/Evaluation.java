@@ -120,6 +120,16 @@ public class Evaluation {
 		}
 	}
 
+	public static double F1Score(double precision, double recall) 
+	{
+		if (precision + recall == 0) {
+			// Handle the case where both precision and recall are zero to avoid division by zero.
+			return 0.0;
+		} else {
+			return 2 * (precision * recall) / (precision + recall);
+		}
+	}
+
 	public static double MeanF1Score(boolean[][] relevantDocuments, Integer numTotalRelevantDocuments) 
 	{
 		double f1Sum = 0.0;
@@ -135,34 +145,31 @@ public class Evaluation {
 	{
 		ArrayList<PRPoint> precisionRecallCurve = new ArrayList<>();
 		
-		int numRelevantDocuments = numTotalRelevantDocuments;
 		int numRetrievedDocuments = 0;
-		
+
 		for (int i = 0; i < relevantDocuments.length; i++) 
 		{
 			if (relevantDocuments[i]) {
-				numRelevantDocuments++;
+				numRetrievedDocuments++;
 			}
-			
-			numRetrievedDocuments++;
-			
-			double precision = (double) numRelevantDocuments / numRetrievedDocuments;
-			double recall = (double) numRelevantDocuments / numRelevantDocuments;
-			
+
+			double precision = (double) numRetrievedDocuments / (i + 1);
+			double recall = (double) numRetrievedDocuments / numTotalRelevantDocuments;
+
 			precisionRecallCurve.add(new PRPoint(recall, precision));
 		}
-		
+
 		return precisionRecallCurve;
 	}
 
-	public static ArrayList<PRPoint> computeAveragePrecisionRecallCurve(boolean[][] relevantDocuments) 
+	public static ArrayList<PRPoint> computeAveragePrecisionRecallCurve(boolean[][] relevantDocuments, Integer numTotalRelevantDocuments) 
 	{
 		ArrayList<PRPoint> averagePrecisionRecallCurve = new ArrayList<>();
 		int length = relevantDocuments[0].length;
 		
 		for (int i = 0; i < relevantDocuments.length; i++) 
 		{
-			ArrayList<PRPoint> precisionRecallCurve = computePrecisionRecallCurve(relevantDocuments[i]);
+			ArrayList<PRPoint> precisionRecallCurve = computePrecisionRecallCurve(relevantDocuments[i], numTotalRelevantDocuments);
 			
 			// Average the points
 			for (int j = 0; j < precisionRecallCurve.size(); j++) 
@@ -191,26 +198,25 @@ public class Evaluation {
 
 	public static ArrayList<PRPoint> applyStepFunction(ArrayList<PRPoint> precisionRecallPoints) 
 	{
-    	if (recallThresholds.length == 0) {
-			throw new IllegalArgumentException("Recall thresholds must be provided.");
-		}
-		
 		// Copy points
 		ArrayList<PRPoint> stepFunctionCurve = new ArrayList<>(precisionRecallPoints); 
 
 		double maxP = 0;
 
 		// Reverse traverse the array
-		for (int i = stepFunctionCurve.length; i > 0; i--) 
+		for (int i = stepFunctionCurve.size(); i > 0; i--) 
 		{
 			// If the point is higher than the highest point at the right
-			if (stepFunctionCurve[i].precision > maxP) {
+			if (stepFunctionCurve.get(i).precision > maxP) {
 				// Update the maximum found
-				maxP = stepFunctionCurve[i].precision;
+				maxP = stepFunctionCurve.get(i).precision;
 			}
 			else {
 				// Interpolate the curve point
-				stepFunctionCurve[i].precision = maxP;
+				PRPoint p = stepFunctionCurve.get(i);
+				p.precision = maxP;
+
+				stepFunctionCurve.set(i, p);
 			}
 		}
 
