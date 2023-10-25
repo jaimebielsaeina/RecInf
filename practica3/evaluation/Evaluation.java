@@ -1,66 +1,97 @@
 import java.util.Map;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.PrintWriter;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.TreeMap;
-import java.util.Arrays;
-import java.util.ArrayList;
 
 
 public class Evaluation {
 
-
-	public static class PRPoint 
+	// Precision-recall point.
+	public static class PRPoint
 	{
+		// Recall and precision values.
 		public double recall;
 		public double precision;
 
+		// Constructor.
 		public PRPoint(double recall, double precision) {
 			this.recall = recall;
 			this.precision = precision;
 		}
 	}
 
-	public static double precision(boolean[] relevantDocuments, Integer K)
+	/**
+	 * Computes the precision of the top K retrieved documents.
+	 * @param retrievedDocuments Array of booleans order by preference indicating
+	 *							 whether a document is relevant or not.
+	 * @param K Number of retrieved documents to consider.
+	 * @return Precision at K.
+	 */
+	public static double precision(boolean[] retrievedDocuments, Integer K)
 	{
-		if (K <= 0 || K > relevantDocuments.length) K = relevantDocuments.length;
+		// If K is not between 1 and the number of retrieved documents,
+		// sets it to the number of retrieved documents.
+		if (K <= 0 || K > retrievedDocuments.length) K = retrievedDocuments.length;
 	
-		int numRelevantDocuments = 0;
+		// Counts the number of relevant documents in the top K retrieved documents.
+		int truePositives = 0;
+		for (int i = 0; i < K; i++) if (retrievedDocuments[i]) truePositives++;
 	
-		for (int i = 0; i < K; i++) 
-				if (relevantDocuments[i]) numRelevantDocuments++;
-	
-		return (double) numRelevantDocuments / Integer.min(K, relevantDocuments.length);
+		// Returns the precision using the first K documents.
+		return (double) truePositives / Integer.min(K, retrievedDocuments.length);
 	}
 
-	public static double precision(boolean[] relevantDocuments) 
+	/**
+	 * Computes the precision of all the retrieved documents.
+	 * @param retrievedDocuments Array of booleans order by preference indicating
+	 *							 whether a document is relevant or not.
+	 * @return Precision at K.
+	 */
+	public static double precision(boolean[] retrievedDocuments) 
 	{
-		return precision(relevantDocuments, relevantDocuments.length);
+		return precision(retrievedDocuments, retrievedDocuments.length);
 	}
 
-	public static double avgPrecision(boolean[] relevantDocuments, Integer K) 
+	/**
+	 * Computes the average precision of the top K retrieved documents.
+	 * @param retrievedDocuments Array of booleans order by preference indicating
+	 *							 whether a document is relevant or not.
+	 * @param K Number of retrieved documents to consider.
+	 * @return Average precision at K.
+	 */
+	public static double avgPrecision(boolean[] retrievedDocuments, Integer K) 
 	{
-		double avgPrecision = 0.0;
-		int numRelevantDocuments = 0;
-		if (K <= 0 || K > relevantDocuments.length) K = relevantDocuments.length;
+		// If K is not between 1 and the number of retrieved documents,
+		// sets it to the number of retrieved documents.
+		if (K <= 0 || K > retrievedDocuments.length) K = retrievedDocuments.length;
 	
+		double sumPrecisions = 0.0;
+		int truePositives = 0;
+	
+		// Gets the sum of precisions at each relevant document.
 		for (int i = 0; i < K;) 
-		{
-			if (relevantDocuments[i++]) 
-			{
-				numRelevantDocuments++;
-				avgPrecision += (double) numRelevantDocuments / i;
-			}
+				if (retrievedDocuments[i++]) {
+					truePositives++;
+					sumPrecisions += (double) truePositives / i;
 		}
 	
-		return (double) avgPrecision / numRelevantDocuments;
+		// Returns the average precision using the first K documents.
+		return (double) sumPrecisions / truePositives;
 	}
 
-	public static double avgPrecision(boolean[] relevantDocuments) 
+	/**
+	 * Computes the average precision of all the retrieved documents.
+	 * @param retrievedDocuments Array of booleans order by preference indicating
+	 *							 whether a document is relevant or not.
+	 * @return Average precision at K.
+	 */
+	public static double avgPrecision(boolean[] retrievedDocuments) 
 	{
-		return avgPrecision(relevantDocuments, relevantDocuments.length);
+		return avgPrecision(retrievedDocuments, retrievedDocuments.length);
 	}
 
 	/*public static double meanAvgPrecision(boolean[][] relevantDocuments, int K) 
@@ -83,24 +114,41 @@ public class Evaluation {
 		return MeanAvgPrecision(relevantDocuments, relevantDocuments.length);
 	}*/
 
-	public static double recall(boolean[] relevantDocuments, int K, Integer numTotalRelevantDocuments) 
+	/**
+	 * Computes the recall of the top K retrieved documents.
+	 * @param retrievedDocuments Array of booleans order by preference indicating
+	 *							 whether a document is relevant or not.
+	 * @param K Number of retrieved documents to consider.
+	 * @param relevantDocuments Number of relevant documents.
+	 * @return Recall at K.
+	 */
+	public static double recall(boolean[] retrievedDocuments, int K, Integer relevantDocuments) 
 	{
-		if (K <= 0 || K > relevantDocuments.length) K =	relevantDocuments.length;
+		// If K is not between 1 and the number of retrieved documents,
+		// sets it to the number of retrieved documents.
+		if (K <= 0 || K > retrievedDocuments.length) K = retrievedDocuments.length;
 	
-		int numRelevantDocuments = 0;
+		// Avoids division by zero.
+		if (relevantDocuments == 0) return 0.0;
 	
-		if (numTotalRelevantDocuments == 0) return 0.0; // Avoid division by zero
+		// Counts the number of relevant documents in the top K retrieved documents.
+		int truePositives = 0;
+		for (int i = 0; i < K; i++) if (retrievedDocuments[i]) truePositives++;
 	
-		for (int i = 0; i < K; i++) 
-				if (relevantDocuments[i])
-						numRelevantDocuments++;
-	
-		return (double) numRelevantDocuments / numTotalRelevantDocuments;
+		// Returns the recall using the first K documents.
+		return (double) truePositives / relevantDocuments;
 	}
 
-	public static double recall(boolean[] relevantDocuments, Integer numTotalRelevantDocuments) 
+	/**
+	 * Computes the recall of all the retrieved documents.
+	 * @param retrievedDocuments Array of booleans order by preference indicating
+	 *							 whether a document is relevant or not.
+	 * @param numTotalRelevantDocuments Number of relevant documents.
+	 * @return Recall at K.
+	 */
+	public static double recall(boolean[] retrievedDocuments, Integer numTotalRelevantDocuments) 
 	{
-		return recall(relevantDocuments, relevantDocuments.length, numTotalRelevantDocuments);
+		return recall(retrievedDocuments, retrievedDocuments.length, numTotalRelevantDocuments);
 	}
 
 	/*public static double MeanAvgRecall(boolean[][] relevantDocuments, int K, Integer numTotalRelevantDocuments) 
@@ -123,15 +171,21 @@ public class Evaluation {
 		return MeanAvgRecall(relevantDocuments, relevantDocuments.length, numTotalRelevantDocuments);
 	}*/
 
+	/**
+	 * Computes the F-betta score using some precision and recall value.
+	 * @param betta Beta value.
+	 * @param precision Precision.
+	 * @param recall Recall.
+	 * @return F-betta score.
+	 */
 	public static double fBettaScore(double betta, double precision, double recall) 
 	{
-		if (precision + recall == 0) {
-			// Handle the case where both precision and recall are zero to avoid division by zero.
-			return 0.0;
-		} else {
-			betta *= betta;
-			return (1 + betta) * (precision * recall) / (betta * precision + recall);
-		}
+		// Both precision and recall cannot bt 0 at the same time.
+		if (precision + recall == 0) return 0.0;
+
+		// Returns the F-betta score.
+		betta *= betta;
+		return (1 + betta) * (precision * recall) / (betta * precision + recall);
 	}
 
 	/*public static double MeanF1Score(boolean[][] relevantDocuments, Integer numTotalRelevantDocuments) 
@@ -145,34 +199,34 @@ public class Evaluation {
 		return f1Sum / relevantDocuments.length;
 	}*/
 
-	public static ArrayList<PRPoint> computePrecisionRecallCurve(boolean[] relevantDocuments, Integer numTotalRelevantDocuments) 
+	/**
+	 * Computes the precision-recall curve of the retrieved documents, getting a
+	 * point for each relevant document.
+	 * @param retrievedDocuments Array of booleans order by preference indicating
+	 *							 whether a document is relevant or not.
+	 * @param numTotalRelevantDocuments Number of relevant documents.
+	 * @return ArrayList containing the points of the precision-recall curve.
+	 */
+	public static ArrayList<PRPoint> precisionRecallCurve(boolean[] retrievedDocuments, Integer numTotalRelevantDocuments) 
 	{
-		ArrayList<PRPoint> precisionRecallCurve = new ArrayList<>();
+		// Structure to store the points of the precision-recall curve.
+		ArrayList<PRPoint> pcCurve = new ArrayList<>();
 		
 		int numRetrievedDocuments = 0;
 
-		for (int i = 0; i < relevantDocuments.length; i++) 
-		{
-			if (relevantDocuments[i]) {
-				numRetrievedDocuments++;
-
-				double precision = (double) numRetrievedDocuments / (i + 1);
-				double recall = (double) numRetrievedDocuments / numTotalRelevantDocuments;
-
-				precisionRecallCurve.add(new PRPoint(recall, precision));
-			}
+		// Gets a point for each relevant document:
+		for (int i = 0; i < retrievedDocuments.length; i++) 
+				if (retrievedDocuments[i]) {
+					numRetrievedDocuments++;
+					// Computes the precision and recall values.
+					double precision = (double) numRetrievedDocuments / (i + 1);
+					double recall = (double) numRetrievedDocuments / numTotalRelevantDocuments;
+					// Adds the point to the curve.
+					pcCurve.add(new PRPoint(recall, precision));
 		}
 
-		return precisionRecallCurve;
+		return pcCurve;
 	}
-
-	/*public static ArrayList<PRPoint> interpolatePrecisionRecallCurve(ArrayList<PRPoint> points, int numPoints) {
-		ArrayList<PRPoint> interpolatedCurve = new ArrayList<>();
-
-		for (double i=0; i)
-
-		return interpolatedCurve;
-	}*/
 
 	/*public static ArrayList<PRPoint> computeAveragePrecisionRecallCurve(boolean[][] relevantDocuments, Integer numTotalRelevantDocuments) 
 	{
@@ -208,49 +262,43 @@ public class Evaluation {
 		return averagePrecisionRecallCurve;
 	}*/
 
-	public static ArrayList<PRPoint> applyStepFunction(ArrayList<PRPoint> precisionRecallPoints, int nPoints) 
+	/**
+	 * Interpolates a step function curve.
+	 * @param precisionRecallPoints Points of the step function curve.
+	 * @param nPoints Number of points of the interpolated curve.
+	 * @return ArrayList containing nPoints points forming the interpolated curve.
+	 */
+	public static ArrayList<PRPoint> interpolateStepFunction(ArrayList<PRPoint> precisionRecallPoints, int nPoints) 
 	{
-		// Copy points
-		ArrayList<PRPoint> stepFunctionCurve = new ArrayList<>(precisionRecallPoints);
-		ArrayList<PRPoint> res = new ArrayList<>();
+		// Structure to store the points of the interpolated curve.
+		double[] precs = new double[nPoints];
 
-		double maxP = 0;
-
-		// Reverse traverse the array
-		for (int i = stepFunctionCurve.size()-1; i >= 0; i--) 
-		{
-			// If the point is higher than the highest point at the right
-			if (stepFunctionCurve.get(i).precision > maxP) {
-				// Update the maximum found
-				maxP = stepFunctionCurve.get(i).precision;
-			}
-			else {
-				// Interpolate the curve point
-				PRPoint p = stepFunctionCurve.get(i);
-				p.precision = maxP;
-
-				stepFunctionCurve.set(i, p);
-			}
-		}
-
+		// Requested recall for the next point, and maximum precision found so far (reverse iteration).
 		double requestedRecall = 1;
 		double lastPrecission = 0;
-		double[] precs = new double[nPoints];
-		int oldCurvePoint = stepFunctionCurve.size()-1;
+
+		// Indexes to iterate over the points of the original and interpolated curve.
+		int oldCurvePoint = precisionRecallPoints.size()-1;
 		int newCurvePoint = nPoints;
 
+		// While there are points to interpolate:
 		while (newCurvePoint > 0) {
-			while (oldCurvePoint >= 0 && stepFunctionCurve.get(oldCurvePoint).recall >= requestedRecall - 1e-6) {
-				lastPrecission = stepFunctionCurve.get(oldCurvePoint--).precision;
+			// Gets the maximum precision for the requested recall value.
+			// (Using 1e-6 as a tolerance to avoid double errors).
+			while (oldCurvePoint >= 0 && precisionRecallPoints.get(oldCurvePoint).recall >= requestedRecall - 1e-6) {
+				// If the precision is greater than the maximum found so far, updates it.
+				lastPrecission = Double.max(lastPrecission, precisionRecallPoints.get(oldCurvePoint--).precision);
 			}
+			// Adds the point to the interpolated curve.
 			precs[--newCurvePoint] = lastPrecission;
+			// Updates the requested recall value.
 			requestedRecall -= 1.0/(nPoints-1);
 		}
 
-		for (int i=0; i<nPoints; i++) {
-			res.add(new PRPoint(1.0*i/(nPoints-1), precs[i]));
-		}
-
+		// Converts the array of precisions to an ArrayList of PRPoints, and returns it.
+		ArrayList<PRPoint> res = new ArrayList<>();
+		for (int i=0; i<nPoints; i++) 
+				res.add(new PRPoint(1.0*i/(nPoints-1), precs[i]));
 		return res;
 	}
 
@@ -313,7 +361,7 @@ public class Evaluation {
 			System.err.println("Error reading qRels file: " + e.getMessage());
 			System.exit(1);
 		}
-		
+
 		// Reads results file.
 		Map<String, Map<String, Boolean>> results = new HashMap<String, Map<String, Boolean>>();
 		try {
@@ -362,8 +410,8 @@ public class Evaluation {
 				f1 = fBettaScore(1, precision, recall);
 				prec10 = precision(areRelevant, 10);
 				avgPrec = avgPrecision(areRelevant, 0);
-				curve = computePrecisionRecallCurve(areRelevant, totalRelevantes);
-				interpolatedCurve = applyStepFunction(curve, 11);
+				curve = precisionRecallCurve(areRelevant, totalRelevantes);
+				interpolatedCurve = interpolateStepFunction(curve, 11);
 
 				// Updates sum of metrics.
 				meanPrecision += precision;
@@ -409,8 +457,10 @@ public class Evaluation {
 			System.out.println("Done!");
 
 		} catch (Exception e) {
+
 			System.err.println("Error: " + e.getMessage());
 			System.exit(1);
+
 		}
 
 	}
