@@ -7,11 +7,13 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.PrintWriter;
 
-
+/**
+ * Class to compute the metrics of a retrieval system.
+ */
 public class Evaluation {
 
 	// Precision-recall point.
-	public static class PRPoint
+	private static class PRPoint
 	{
 		// Recall and precision values.
 		public double recall;
@@ -49,7 +51,7 @@ public class Evaluation {
 	 * Computes the precision of all the retrieved documents.
 	 * @param retrievedDocuments Array of booleans order by preference indicating
 	 *							 whether a document is relevant or not.
-	 * @return Precision at K.
+	 * @return Precision.
 	 */
 	public static double precision(boolean[] retrievedDocuments) 
 	{
@@ -87,32 +89,12 @@ public class Evaluation {
 	 * Computes the average precision of all the retrieved documents.
 	 * @param retrievedDocuments Array of booleans order by preference indicating
 	 *							 whether a document is relevant or not.
-	 * @return Average precision at K.
+	 * @return Average precision.
 	 */
 	public static double avgPrecision(boolean[] retrievedDocuments) 
 	{
 		return avgPrecision(retrievedDocuments, retrievedDocuments.length);
 	}
-
-	/*public static double meanAvgPrecision(boolean[][] relevantDocuments, int K) 
-	{
-		if (K <= 0 || K > relevantDocuments.length) {
-			throw new IllegalArgumentException("K must be greater than 0.");
-		}
-	
-		double mapSum = 0.0;
-	
-		for (int i = 0; i < relevantDocuments.length; i++) {
-			mapSum += precision(relevantDocuments[i], K);
-		}
-	
-		return mapSum / relevantDocuments.length;
-	}*/
-
-	/*public static double meanAvgPrecision(boolean[][] relevantDocuments) 
-	{
-		return MeanAvgPrecision(relevantDocuments, relevantDocuments.length);
-	}*/
 
 	/**
 	 * Computes the recall of the top K retrieved documents.
@@ -144,32 +126,12 @@ public class Evaluation {
 	 * @param retrievedDocuments Array of booleans order by preference indicating
 	 *							 whether a document is relevant or not.
 	 * @param numTotalRelevantDocuments Number of relevant documents.
-	 * @return Recall at K.
+	 * @return Recall.
 	 */
 	public static double recall(boolean[] retrievedDocuments, Integer numTotalRelevantDocuments) 
 	{
 		return recall(retrievedDocuments, retrievedDocuments.length, numTotalRelevantDocuments);
 	}
-
-	/*public static double MeanAvgRecall(boolean[][] relevantDocuments, int K, Integer numTotalRelevantDocuments) 
-	{
-		if (K <= 0) {
-			throw new IllegalArgumentException("K must be greater than 0.");
-		}
-	
-		double marSum = 0.0;
-	
-		for (int i = 0; i < relevantDocuments.length; i++) {
-			marSum += recall(relevantDocuments[i], K, numTotalRelevantDocuments);
-		}
-	
-		return marSum / relevantDocuments.length;
-	}*/
-
-	/*public static double MeanAvgRecall(boolean[][] relevantDocuments, Integer numTotalRelevantDocuments)
-	{
-		return MeanAvgRecall(relevantDocuments, relevantDocuments.length, numTotalRelevantDocuments);
-	}*/
 
 	/**
 	 * Computes the F-betta score using some precision and recall value.
@@ -188,34 +150,28 @@ public class Evaluation {
 		return (1 + betta) * (precision * recall) / (betta * precision + recall);
 	}
 
-	/*public static double MeanF1Score(boolean[][] relevantDocuments, Integer numTotalRelevantDocuments) 
-	{
-		double f1Sum = 0.0;
-
-		for (int i = 0; i < relevantDocuments.length; i++) {
-			f1Sum += fBettaScore(1, relevantDocuments[i], numTotalRelevantDocuments);
-		}
-
-		return f1Sum / relevantDocuments.length;
-	}*/
-
 	/**
 	 * Computes the precision-recall curve of the retrieved documents, getting a
 	 * point for each relevant document.
 	 * @param retrievedDocuments Array of booleans order by preference indicating
 	 *							 whether a document is relevant or not.
+	 * @param K Number of retrieved documents to consider.
 	 * @param numTotalRelevantDocuments Number of relevant documents.
 	 * @return ArrayList containing the points of the precision-recall curve.
 	 */
-	public static ArrayList<PRPoint> precisionRecallCurve(boolean[] retrievedDocuments, Integer numTotalRelevantDocuments) 
+	public static ArrayList<PRPoint> precisionRecallCurve(boolean[] retrievedDocuments, int K, Integer numTotalRelevantDocuments) 
 	{
+		// If K is not between 1 and the number of retrieved documents,
+		// sets it to the number of retrieved documents.
+		if (K <= 0 || K > retrievedDocuments.length) K = retrievedDocuments.length;
+
 		// Structure to store the points of the precision-recall curve.
 		ArrayList<PRPoint> pcCurve = new ArrayList<>();
-		
+
 		int numRetrievedDocuments = 0;
 
 		// Gets a point for each relevant document:
-		for (int i = 0; i < retrievedDocuments.length; i++) 
+		for (int i = 0; i < K; i++) 
 				if (retrievedDocuments[i]) {
 					numRetrievedDocuments++;
 					// Computes the precision and recall values.
@@ -227,40 +183,6 @@ public class Evaluation {
 
 		return pcCurve;
 	}
-
-	/*public static ArrayList<PRPoint> computeAveragePrecisionRecallCurve(boolean[][] relevantDocuments, Integer numTotalRelevantDocuments) 
-	{
-		ArrayList<PRPoint> averagePrecisionRecallCurve = new ArrayList<>();
-		int length = relevantDocuments[0].length;
-		
-		for (int i = 0; i < relevantDocuments.length; i++) 
-		{
-			ArrayList<PRPoint> precisionRecallCurve = computePrecisionRecallCurve(relevantDocuments[i], numTotalRelevantDocuments);
-			
-			// Average the points
-			for (int j = 0; j < precisionRecallCurve.size(); j++) 
-			{
-				if (i == 0) 
-				{
-					PRPoint point = precisionRecallCurve.get(j);
-					point.precision /= length;
-					point.recall /= length;
-
-					averagePrecisionRecallCurve.add(point);
-				}
-				else 
-				{
-					PRPoint point = averagePrecisionRecallCurve.get(j);
-					point.precision += precisionRecallCurve.get(j).precision/length;
-					point.recall += precisionRecallCurve.get(j).recall/length;
-
-					averagePrecisionRecallCurve.set(j, point);
-				}
-			}
-		}
-		
-		return averagePrecisionRecallCurve;
-	}*/
 
 	/**
 	 * Interpolates a step function curve.
@@ -302,30 +224,6 @@ public class Evaluation {
 		return res;
 	}
 
-	/*public static ArrayList<PRPoint> reducePrecisionRecallCurve(ArrayList<PRPoint> curve, int n) 
-	{
-		if (n <= 0) {
-			throw new IllegalArgumentException("The number of points (n) must be greater than 0.");
-		}
-	
-		int totalPoints = curve.size();
-	
-		if (totalPoints <= n) {
-			return curve; // No reduction needed
-		}
-	
-		double stepSize = (double) totalPoints / (n - 1);
-		ArrayList<PRPoint> reducedCurve = new ArrayList<>();
-	
-		for (int i = 0; i < n; i++) {
-			int index = (int) Math.round(i * stepSize);
-			reducedCurve.add(curve.get(index));
-		}
-	
-		return reducedCurve;
-	}*/
-
-
 	public static void main (String[] args) {
 
 		// Reads command line arguments.
@@ -354,7 +252,7 @@ public class Evaluation {
 				String[] parts = line.trim().split("[ \t]+");
 				if (!qRels.containsKey(parts[0]))
 						qRels.put(parts[0], new LinkedHashMap<String, Boolean>());
-				qRels.get(parts[0]).put(parts[1], Integer.parseInt(parts[2]) == 1);
+				qRels.get(parts[0]).put(parts[1], parts[2].equals("1"));
 			}
 			qRelsFile.close();
 		} catch (Exception e) {
@@ -379,10 +277,19 @@ public class Evaluation {
 			System.exit(1);
 		}
 
+		PrintWriter outputFile;
+
 		try {
 			// Opens output file.
-			PrintWriter outputFile = new PrintWriter(outputFileName);
+			outputFile = new PrintWriter(outputFileName);
 			System.out.println("Writing metrics to " + outputFileName + " ...");
+		} catch	(Exception e) {
+			System.err.println("Error opening output file: " + e.getMessage());
+			System.exit(1);
+			return;
+		}
+
+		try {
 
 			// Defines metrics to be analyzed.
 			double precision, meanPrecision = 0;
@@ -392,26 +299,27 @@ public class Evaluation {
 			double avgPrec, map = 0;
 			ArrayList<PRPoint> curve, interpolatedCurve;
 			double[] interpolatedCurvePoints = new double[11];
-
+			
 			// For each information need:
 			for (String qRel : qRels.keySet()) {
 
 				// Gets information about its results.
 				boolean[] areRelevant = new boolean[results.get(qRel).size()];
+
 				int i = 0, totalRelevantes = 0;
 				for (String infoNeed : results.get(qRel).keySet())
-						areRelevant[i++] = qRels.get(qRel).get(infoNeed);
+						areRelevant[i++] = qRels.get(qRel).containsKey(infoNeed) ? qRels.get(qRel).get(infoNeed) : false;
 				for (Boolean oneIsRel : qRels.get(qRel).values())
 						if (oneIsRel) totalRelevantes++;
 
-				// Computes metrics using the obtained info.
-				precision = precision(areRelevant, 0);
-				recall = recall(areRelevant, 0, totalRelevantes);
-				f1 = fBettaScore(1, precision, recall);
-				prec10 = precision(areRelevant, 10);
-				avgPrec = avgPrecision(areRelevant, 0);
-				curve = precisionRecallCurve(areRelevant, totalRelevantes);
-				interpolatedCurve = interpolateStepFunction(curve, 11);
+				// Computes metrics using the obtained info (just 50 first results for information need).
+				precision = precision(areRelevant, 50);							// Precision (like prec@50).
+				recall = recall(areRelevant, 50, totalRelevantes);				// Recall (like rec@50).
+				f1 = fBettaScore(1, precision, recall);						// F1 score.
+				prec10 = precision(areRelevant, 10);								// Precision at 10 (prec@10).
+				avgPrec = avgPrecision(areRelevant, 50);							// Average precision.
+				curve = precisionRecallCurve(areRelevant, 50, totalRelevantes);	// Precision-recall curve points.
+				interpolatedCurve = interpolateStepFunction(curve, 11);		// Interpolated precision-recall curve points.
 
 				// Updates sum of metrics.
 				meanPrecision += precision;
@@ -423,12 +331,12 @@ public class Evaluation {
 						interpolatedCurvePoints[j] += interpolatedCurve.get(j).precision;
 
 				// Prints metrics.
-				outputFile.println("INFORMATION_NEED " + qRel);
-				outputFile.printf("precision %.3f\n", precision);
-				outputFile.printf("recall %.3f\n", recall);
-				outputFile.printf("F1 %.3f\n", f1);
-				outputFile.printf("prec@10 %.3f\n", prec10);
-				outputFile.printf("average_precision %.3f\n", avgPrec);
+				outputFile.println("INFORMATION_NEED\t" + qRel);
+				outputFile.printf("precision\t%.3f\n", precision);
+				outputFile.printf("recall\t%.3f\n", recall);
+				outputFile.printf("F1\t%.3f\n", f1);
+				outputFile.printf("prec@10\t%.3f\n", prec10);
+				outputFile.printf("average_precision\t%.3f\n", avgPrec);
 				outputFile.println("recall_precision");
 				for (PRPoint point : curve)
 						outputFile.printf("%.3f\t%.3f\n", point.recall, point.precision);
@@ -442,11 +350,11 @@ public class Evaluation {
 			// Prints mean metrics.
 			int numInfoNeeds = qRels.size();
 			outputFile.println("TOTAL");	
-			outputFile.printf("precision %.3f\n", meanPrecision / numInfoNeeds);
-			outputFile.printf("recall %.3f\n", meanRecall / numInfoNeeds);
-			outputFile.printf("F1 %.3f\n", meanF1 / numInfoNeeds);
-			outputFile.printf("prec@10 %.3f\n", meanPrec10 / numInfoNeeds);
-			outputFile.printf("MAP %.3f\n", map / numInfoNeeds);
+			outputFile.printf("precision\t%.3f\n", meanPrecision / numInfoNeeds);
+			outputFile.printf("recall\t%.3f\n", meanRecall / numInfoNeeds);
+			outputFile.printf("F1\t%.3f\n", meanF1 / numInfoNeeds);
+			outputFile.printf("prec@10\t%.3f\n", meanPrec10 / numInfoNeeds);
+			outputFile.printf("MAP\t%.3f\n", map / numInfoNeeds);
 			outputFile.println("interpolated_recall_precision");
 			for (int i = 0; i < interpolatedCurvePoints.length; i++)
 					outputFile.printf("%.3f\t%.3f\n", 1.0*i/(interpolatedCurvePoints.length-1), interpolatedCurvePoints[i] / numInfoNeeds);
@@ -459,6 +367,7 @@ public class Evaluation {
 		} catch (Exception e) {
 
 			System.err.println("Error: " + e.getMessage());
+			outputFile.close();
 			System.exit(1);
 
 		}
