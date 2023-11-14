@@ -11,18 +11,22 @@ from keras.layers import Dense, GlobalAveragePooling1D
 from keras_nlp.layers import TransformerEncoder, TokenAndPositionEmbedding
 from clasificadorLecturaYProcesamientoDatos import lecturaDatosEntrenamientoYTestClasificador, visualizaSerieDatos
 
-nOutputs = 10
 
 #Definición del modelo usado, embeddings posicionales, el encoder de un transformer,
 # un pooling para aplanar la salida del transformer, una densa para procesar el resultado del LSTM
 #y una final para clasificar en las categorias deseadas
-def createModel(tamVoc,tamFrase,tamEmbd):
+def createModel(tamVoc,tamFrase,tamEmbd, nClasses):
     model = Sequential()
     model.add(TokenAndPositionEmbedding(tamVoc, tamFrase, tamEmbd))
     model.add(TransformerEncoder(32, num_heads=3 ))
+    model.add(TransformerEncoder(32, num_heads=3 ))
+    model.add(TransformerEncoder(16, num_heads=5 ))
+
     model.add(GlobalAveragePooling1D())
-    model.add(Dense(12, activation='relu'))
-    model.add(Dense(nOutputs, activation='softmax'))
+    model.add(Dense(64, activation='relu'))
+    model.add(Dense(32, activation='relu'))
+
+    model.add(Dense(nClasses, activation='softmax'))
     model.compile(loss='CategoricalCrossentropy', optimizer=Adam(1e-4), metrics=['accuracy'])
     return model
 
@@ -31,9 +35,9 @@ def createModel(tamVoc,tamFrase,tamEmbd):
 # Puedes cambiar el valor de verbose a 1 si quiere ver el proceso de entrenamiento
 if __name__ == '__main__':
     set_random_seed(0)
-    X_entren, y_entren, X_test, y_test, tamVoc = lecturaDatosEntrenamientoYTestClasificador()
-    model=createModel(tamVoc,len(X_entren[0]),  50)
-    history = model.fit(X_entren, y_entren, epochs=10, validation_steps=10, batch_size=64 , verbose=0)
+    X_entren, y_entren, X_test, y_test, tamVoc, nClasses = lecturaDatosEntrenamientoYTestClasificador()
+    model=createModel(tamVoc,len(X_entren[0]),  50, nClasses)
+    history = model.fit(X_entren, y_entren, epochs=10, validation_steps=10, batch_size=64)
 
     #La versión de la libreria keras_nlp con el modelo de transformer es experimental y
     #no permite guardar el modelo entrenado

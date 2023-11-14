@@ -12,7 +12,7 @@ def __leeDataFrameClasificador(file):
     df = pd.read_csv(file, index_col=False)
     df['Text'] = df['Title'] + '. ' + df['Description']
     df.drop(['Title', 'Description'], axis=1, inplace=True)
-    df_muestra = df.sample(frac=0.1, random_state=0)
+    df_muestra = df.sample(frac=1, random_state=0)
     return df_muestra
 
 # Procesa una cadena de texto para eliminar simbolos de puntuación y otros caracteres no alfanumericos y acentos.
@@ -43,12 +43,15 @@ def __tokenizadorTexto(X_entren, X_test):
 def lecturaDatosEntrenamientoYTestClasificador():
     dataset_entrenamiento = __leeDataFrameClasificador('datos/clasificacionEntrenamiento.csv')
     dataset_test = __leeDataFrameClasificador('datos/clasificacionTest.csv')
+    
+    nClasses = dataset_entrenamiento['Class Index'].max()
+
     X_entren = __limpiaCadenasDeTexto(dataset_entrenamiento['Text'].values)
     X_test = __limpiaCadenasDeTexto(dataset_test['Text'].values)
     X_entren, X_test, tamVoc = __tokenizadorTexto(X_entren, X_test)
-    y_entren = to_categorical(dataset_entrenamiento['Class Index'].values - 1)
-    y_test = to_categorical(dataset_test['Class Index'].values - 1)
-    return (X_entren, y_entren, X_test, y_test, tamVoc)
+    y_entren = to_categorical(dataset_entrenamiento['Class Index'].values - 1, num_classes=nClasses)
+    y_test = to_categorical(dataset_test['Class Index'].values - 1, num_classes=nClasses)
+    return (X_entren, y_entren, X_test, y_test, tamVoc, nClasses)
 
 #Método para visualizar una serie de datos con las etiquetas indicadas en los ejes
 def visualizaSerieDatos(datos,etiquetaX, etiquetaY):

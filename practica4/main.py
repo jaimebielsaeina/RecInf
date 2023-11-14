@@ -69,8 +69,6 @@ titles = []
 descriptions = []
 publishers = []
 
-# Create an RDF Graph
-g = Graph()
 
 # Define the Dublin Core (dc) namespace
 dc = Namespace("http://purl.org/dc/elements/1.1/")
@@ -80,20 +78,34 @@ for filename in os.listdir(directory_path):
     if filename.endswith(".rdf") or filename.endswith(".xml"):
         file_path = os.path.join(directory_path, filename)
 
+        # Create an RDF Graph
+        g = Graph()
+
         # Parse the RDF XML file
         g.parse(file_path, format='xml')
 
         # Extract titles with the Dublin Core (dc) namespace
-        for subject, predicate, obj in g.triples((None, dc.title, None)):
-            titles.append(obj.lower())
+        subject, predicate, obj = next(g.triples((None, dc.title, None)), (None, None, None))
+
+        if obj is None:
+            continue
 
         # Extract description
-        for subject, predicate, obj in g.triples((None, dc.description, None)):
-            descriptions.append(obj.lower())
+        subject, predicate, obj = next(g.triples((None, dc.description, None)), (None, None, None))
+        
+        if obj is None:
+            continue
 
         # Extract publisher
-        for subject, predicate, obj in g.triples((None, dc.publisher, None)):
-            publishers.append(obj.lower())
+        subject, predicate, obj = next(g.triples((None, dc.publisher, None)), (None, None, None))
+        
+        if obj is None:
+            continue
+        
+        # Append the objects to the list
+        titles.append(obj.lower())
+        descriptions.append(obj.lower())
+        publishers.append(obj.lower())
 
 
 categories = generateCategories(publishers)
