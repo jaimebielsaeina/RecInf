@@ -11,6 +11,7 @@ from keras.layers import Dense, GlobalAveragePooling1D
 from keras_nlp.layers import TransformerEncoder, TokenAndPositionEmbedding
 from clasificadorLecturaYProcesamientoDatos import lecturaDatosEntrenamientoYTestClasificador, visualizaSerieDatos
 
+nOutputs = 10
 
 #Definición del modelo usado, embeddings posicionales, el encoder de un transformer,
 # un pooling para aplanar la salida del transformer, una densa para procesar el resultado del LSTM
@@ -21,7 +22,7 @@ def createModel(tamVoc,tamFrase,tamEmbd):
     model.add(TransformerEncoder(32, num_heads=3 ))
     model.add(GlobalAveragePooling1D())
     model.add(Dense(12, activation='relu'))
-    model.add(Dense(4, activation='softmax'))
+    model.add(Dense(nOutputs, activation='softmax'))
     model.compile(loss='CategoricalCrossentropy', optimizer=Adam(1e-4), metrics=['accuracy'])
     return model
 

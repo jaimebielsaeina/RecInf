@@ -32,11 +32,10 @@ def generateY(publishers, categories):
         category_id = categories[category_name]
 
         # Encode in oneHot
-        one_hot = [0] * len(categories)
-        one_hot[category_id] = 1   
+        #one_hot = [0] * len(categories)
+        #one_hot[category_id] = 1   
 
-        # Replace this with your actual function for generating categories
-        y.append(one_hot)
+        y.append(category_id)
 
     # Replace this with your actual function for generating categories
     return y
@@ -99,20 +98,28 @@ for filename in os.listdir(directory_path):
 
 categories = generateCategories(publishers)
 
-print(categories)
-
 # Generate categories using the external function
 ydata = generateY(publishers, categories)
 
 # Convert the list of categories to a string, separated by commas
-for i in range(len(ydata)):
-    ydata[i] = ','.join(str(e) for e in ydata[i])
+#for i in range(len(ydata)):
+#    ydata[i] = ','.join(str(e) for e in ydata[i])
+
 
 # Specify the path for the output CSV file
-output_csv_file = 'output_data.csv'
+output_csv_file = 'clasificacionEntrenamiento.csv'
 
 # Write the data to the CSV file
-df = pd.DataFrame({'title': titles, 'description': descriptions, 'category': ydata})
+df = pd.DataFrame({'Class Index': ydata, 'Title': titles, 'Description': descriptions})
+
+# Shuffle the data
+df = df.sample(frac=1).reset_index(drop=True)
+
+# Separate the 10% of the data for testing
+df_test = df.sample(frac=0.1, random_state=0)
+df = df.drop(df_test.index)
+
 df.to_csv(output_csv_file, index=False)
+df_test.to_csv('clasificacionTest.csv', index=False)
 
 print(f'Data has been written to {output_csv_file}')
