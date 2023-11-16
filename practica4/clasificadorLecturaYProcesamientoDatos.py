@@ -61,6 +61,15 @@ def visualizaSerieDatos(datos,etiquetaX, etiquetaY):
     plt.ylabel(etiquetaY, fontsize=15)
     plt.show()
 
+def guardarSerieDatos(datos, etiquetaX, etiquetaY, nombreFichero):
+    plt.figure(figsize=(10, 5))
+    plt.plot(datos)
+    plt.xlabel(etiquetaX, fontsize=15)
+    plt.ylabel(etiquetaY, fontsize=15)
+    plt.savefig(nombreFichero)
+    plt.close()
+
+
 #Código de ejemplo para estudiar los datos y estructuras generadas por cada método
 if __name__ == '__main__':
     #La estructura de los datos es un fichero tabular con titulo, texto y categoría

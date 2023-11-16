@@ -10,9 +10,12 @@ from keras.optimizers import Adam
 from keras.layers import Dense, GlobalAveragePooling1D
 from keras.callbacks import EarlyStopping
 from keras_nlp.layers import TransformerEncoder, TokenAndPositionEmbedding
-from clasificadorLecturaYProcesamientoDatos import lecturaDatosEntrenamientoYTestClasificador, visualizaSerieDatos
+from clasificadorLecturaYProcesamientoDatos import lecturaDatosEntrenamientoYTestClasificador, visualizaSerieDatos, guardarSerieDatos
 
 from sklearn.metrics import confusion_matrix
+import sys
+
+import leerZaguan
 
 
 #Definición del modelo usado, embeddings posicionales, el encoder de un transformer,
@@ -40,11 +43,24 @@ def createModel(tamVoc,tamFrase,tamEmbd, nClasses):
 # Puedes cambiar el valor de verbose a 1 si quiere ver el proceso de entrenamiento
 if __name__ == '__main__':
 
+    # args: -dir <path> -output <path>
+    # -dir: path to the directory containing the data
+    # -output: path to the output file
+
+    if len(sys.argv) != 5 or sys.argv[1] != "-dir" or sys.argv[3] != "-output":
+        print("Usage: python clasificadorTextoTransformer.py -dir <path> -output <path>")
+        exit(1)
+
+    zaguanDir = sys.argv[2]
+    output = sys.argv[4]
+
+    leerZaguan.leerZaguan(zaguanDir)
+
     set_random_seed(0)
     X_entren, y_entren, X_test, y_test, tamVoc, nClasses = lecturaDatosEntrenamientoYTestClasificador()
     model=createModel(tamVoc,len(X_entren[0]),  50, nClasses)
 
-    early_stopping = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='loss', patience=3, restore_best_weights=True)
     history = model.fit(X_entren, y_entren, epochs=20, validation_steps=10, batch_size=64, callbacks=[early_stopping])
 
     #La versión de la libreria keras_nlp con el modelo de transformer es experimental y
@@ -52,14 +68,15 @@ if __name__ == '__main__':
 
     # Ejemplo de evaluación y clasificación
     scores = model.evaluate(X_test, y_test, verbose=0)
-    print("Precisión del modelo con los test: %.2f%%" % (scores[1] * 100))
-    print("Ejemplo de clasificación de la componente 0 del test")
-    print("Categoria real: ", np.argmax(y_test[0]) + 1, " Categoria predicha: ",
-          np.argmax(model.predict(np.expand_dims(X_test[0], axis=0), verbose=0)[0]) + 1)
+    precision = scores[1] * 100
+
+    # Guardar precision en precision.txt
+    f = open("precision.txt", "w")
+    f.write(str(precision))
+    f.close()
 
     # visualizamos la evolución del error de entrenamiento
-    visualizaSerieDatos(history.history['accuracy'], 'Epoch', 'Precisión')
-    visualizaSerieDatos(history.history['loss'], 'Epoch', 'Error')
+    guardarSerieDatos(history.history['loss'], 'Epoch', 'Error', "error.jpg")
 
     # visualizamos la estructura del modelo usado
     model.summary()
@@ -69,12 +86,18 @@ if __name__ == '__main__':
     y_prediction = np.argmax(y_prediction, axis=1)
     y_test = np.argmax(y_test, axis=1)
 
-    nTestClasses = len(np.unique(y_test))
-
     #Create confusion matrix and normalizes it over predicted (columns)
-    result = confusion_matrix(y_test, y_prediction , normalize='pred')
-    print(result)
+    result = confusion_matrix(y_test, y_prediction, normalize='pred')
 
-    # Write to file
-    df_cm = pd.DataFrame(result, range(nTestClasses), range(nTestClasses))
-    df_cm.to_csv('confusion_matrix.csv', index=False)
+    matrix_size = len(result)
+
+
+    # Write matrix to txt file without format, one row per line
+    f = open("confusion.txt", "w")
+
+    for i in range(matrix_size):
+        for j in range(matrix_size):
+            f.write(str(result[i][j]) + " ")
+        f.write("\n")
+
+    f.close()
