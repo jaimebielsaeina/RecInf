@@ -14,11 +14,12 @@ def NormalizeData(data):
     return (data - np.min(data)) / (np.max(data) - np.min(data))
 
 #Definición del modelo usado, 2 capas densas y una final de clasificación en las categorias deseadas
-def createModel():
+def createModel(nClasses):
     model = Sequential()
+    model.add(Dense(64, activation='relu'))
+    model.add(Dense(48, activation='relu'))
     model.add(Dense(32, activation='relu'))
-    model.add(Dense(12, activation='relu'))
-    model.add(Dense(4, activation='softmax'))
+    model.add(Dense(nClasses, activation='softmax'))
     model.compile(loss='CategoricalCrossentropy', optimizer=Adam(1e-4), metrics=['accuracy'])
     return model
 
@@ -29,9 +30,9 @@ def createModel():
 # Puedes cambiar el valor de verbose a 1 si quiere ver el proceso de entrenamiento
 if __name__ == '__main__':
     set_random_seed(0)
-    X_entren, y_entren, X_test, y_test, tamVoc = lecturaDatosEntrenamientoYTestClasificador()
-    model=createModel()
-    history = model.fit(NormalizeData(X_entren), y_entren, epochs=20, validation_steps=10, batch_size=64 , verbose=0)
+    X_entren, y_entren, X_test, y_test, tamVoc, nClasses = lecturaDatosEntrenamientoYTestClasificador()
+    model=createModel(nClasses)
+    history = model.fit(NormalizeData(X_entren), y_entren, epochs=30, validation_steps=10, batch_size=64 , verbose=0)
 
     #para hacer pruebas con el modelo entrenado sin tener que reentrenarlo continuamente puedes guardar el
     #modelo y posteriormente cargarlo

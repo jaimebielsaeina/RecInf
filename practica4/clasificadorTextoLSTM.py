@@ -12,12 +12,13 @@ from clasificadorLecturaYProcesamientoDatos import lecturaDatosEntrenamientoYTes
 
 #Definición del modelo usado, embeddings, una red lstm, una densa para procesar el resultado del LSTM
 #y una final para clasificar en las categorias deseadas
-def createModel(tamVoc,tamFrase,tamEmbd):
+def createModel(tamVoc, tamFrase, tamEmbd, nClasses):
     model = Sequential()
     model.add(Embedding(tamVoc, tamEmbd, input_length=tamFrase))
     model.add(LSTM(32))
+    model.add(Dense(32, activation='relu'))
     model.add(Dense(12, activation='relu'))
-    model.add(Dense(4, activation='softmax'))
+    model.add(Dense(nClasses, activation='softmax'))
     model.compile(loss='CategoricalCrossentropy', optimizer=Adam(1e-4), metrics=['accuracy'])
     return model
 
@@ -26,10 +27,10 @@ def createModel(tamVoc,tamFrase,tamEmbd):
 # Puedes cambiar el valor de verbose a 1 si quiere ver el proceso de entrenamiento
 if __name__ == '__main__':
     set_random_seed(0)
-    X_entren, y_entren, X_test, y_test, tamVoc = lecturaDatosEntrenamientoYTestClasificador()
+    X_entren, y_entren, X_test, y_test, tamVoc, nClasses = lecturaDatosEntrenamientoYTestClasificador()
 
-    model=createModel(tamVoc,len(X_entren[0]),  50)
-    history = model.fit(X_entren, y_entren, epochs=10, validation_steps=10, batch_size=64 , verbose=0)
+    model=createModel(tamVoc, len(X_entren[0]), 50, nClasses)
+    history = model.fit(X_entren, y_entren, epochs=40, validation_steps=10, batch_size=64 , verbose=0)
 
     # para hacer pruebas con el modelo entrenado sin tener que reentrenarlo continuamente puedes guardar el
     # modelo y posteriormente cargarlo

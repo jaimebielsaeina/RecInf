@@ -125,9 +125,10 @@ def leerZaguan(directory_path):
         os.makedirs('datos')
 
     # Specify the path for the output CSV file
-    output_csv_file = 'datos/clasificacionEntrenamiento.csv'
+    output_csv_file_train = 'datos/clasificacionEntrenamiento.csv'
+    output_csv_file_test = 'datos/clasificacionTest.csv'
 
-    # Write the data to the CSV file
+    # Create a Pandas DataFrame with the data
     df = pd.DataFrame({'Class Index': ydata, 'Title': titles, 'Description': descriptions})
 
     # Shuffle the data
@@ -137,7 +138,8 @@ def leerZaguan(directory_path):
     df_test = df.sample(frac=0.1, random_state=0)
     df = df.drop(df_test.index)
 
-    df.to_csv(output_csv_file, index=False)
-    df_test.to_csv('datos/clasificacionTest.csv', index=False)
+    # Write the data to the CSV file
+    df.to_csv(output_csv_file_train, index=False)
+    df_test.to_csv(output_csv_file_test, index=False)
 
-    print(f'Data has been written to {output_csv_file} and datos/clasificacionTest.csv')
+    print(f'Data has been written to {output_csv_file_train} and {output_csv_file_test}')
