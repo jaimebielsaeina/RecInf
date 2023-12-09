@@ -70,9 +70,9 @@ public class E_AccesoSPARQL {
 		qexec = QueryExecutionFactory.create(query, model) ;
 		System.out.println( qexec.execAsk()) ;
 		qexec.close() ;
-		
+
 		System.out.println("----------------------------------------");
-	
+
 		//definimos la consulta (tipo cosntruct)
 		queryString = "construct {?x <http://miuri/inverseSameAs> ?y} where {?y <http://www.w3.org/2002/07/owl#sameAs> ?x}" ;
 		query = QueryFactory.create(queryString) ;
@@ -80,6 +80,44 @@ public class E_AccesoSPARQL {
 		resultModel = qexec.execConstruct() ;
 		qexec.close() ;
 		resultModel.write(System.out);
+
+		System.out.println("----------------------------------------");
+
+		// Literales que contengan el texto "Berners-Lee".
+		queryString = "Select ?z WHERE  {?x ?y ?z . FILTER(CONTAINS(?z, \"Berners-Lee\"))}" ;
+
+		//ejecutamos la consulta y obtenemos los resultados
+		query = QueryFactory.create(queryString) ;
+		qexec = QueryExecutionFactory.create(query, model) ;
+		try {
+			ResultSet results = qexec.execSelect() ;
+			for ( ; results.hasNext() ; )
+			{
+				QuerySolution sol = results.nextSolution() ;
+				RDFNode z = sol.get("z") ;
+				if (z.isLiteral()) System.out.println(z.toString());
+				else System.out.println(z.asResource().getURI());
+			}
+		} finally { qexec.close() ; }
+
+		System.out.println("----------------------------------------");
+
+		// Título de todos los documentos creados por Tim Berners-Lee.
+		queryString = "SELECT ?t WHERE {?x <http://purl.org/dc/elements/1.1/title> ?t . ?x <http://xmlns.com/foaf/0.1/maker> ?n . FILTER(CONTAINS(?n, \"Tim Berners-Lee\"))}" ;
+
+		//ejecutamos la consulta y obtenemos los resultados
+		query = QueryFactory.create(queryString) ;
+		qexec = QueryExecutionFactory.create(query, model) ;
+		try {
+			ResultSet results = qexec.execSelect() ;
+			for ( ; results.hasNext() ; )
+			{
+				QuerySolution sol = results.nextSolution() ;
+				RDFNode x = sol.get("t") ;
+				if (x.isLiteral()) System.out.println(x.toString());
+				else System.out.println(x.asResource().getURI());
+			}
+		} finally { qexec.close() ; }
 		
 	}
 	
