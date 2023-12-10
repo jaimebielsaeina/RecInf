@@ -122,7 +122,7 @@ public class SemanticGenerator {
             //plotRDF(model);
 
             FileUtils.deleteDirectory(new File(rdfPath));
-		    Dataset data = TDB2Factory.connectDataset(rdfPath);
+		    Dataset data = TDB2Factory.connectDataset(rdfPath + "/tdb2");
             //hacemos una transacción de escritura y confirmamos los cambios
             data.begin(ReadWrite.WRITE) ;
             data.getDefaultModel().add(model);

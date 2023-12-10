@@ -1,11 +1,6 @@
 package IR.Practica5;
 
-import java.io.InputStream;
-import java.io.BufferedWriter;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -13,6 +8,8 @@ import java.util.List;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import demo.SpanishAnalyzer2;
+import org.apache.commons.io.FileUtils;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
@@ -21,10 +18,17 @@ import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.query.ResultSet;
+import org.apache.jena.query.text.EntityDefinition;
+import org.apache.jena.query.text.TextDatasetFactory;
+import org.apache.jena.query.text.TextIndexConfig;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.tdb2.TDB2Factory;
+import org.apache.jena.vocabulary.DC;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -35,7 +39,9 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.MMapDirectory;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -127,10 +133,34 @@ public class SemanticSearcher {
 
         try {
 
+            //definimos la configuración del repositorio indexado
+            EntityDefinition entDef = new EntityDefinition("uri", "name", ResourceFactory.createProperty("http://xmlns.com/foaf/0.1/","name"));
+            entDef.set("description", DC.description.asNode());
+            TextIndexConfig config = new TextIndexConfig(entDef);
+            config.setAnalyzer(new SpanishAnalyzer2());
+            config.setQueryAnalyzer(new SpanishAnalyzer2());
+            config.setMultilingualSupport(true);
+
+            //definimos el repositorio indexado todo en disco
+            //se borra el repositorio para forzar a que cada vez que lo ejecutamos se cree de cero
+            FileUtils.deleteDirectory(new File("repositorio"));
+            Dataset ds1 = TDB2Factory.connectDataset(rdfPath + "tdb2");
+            Directory dir =  new MMapDirectory(Paths.get(rdfPath + "lucene"));
+            Dataset ds = TextDatasetFactory.createLucene(ds1, dir, config) ;
+
+            // cargamos el fichero deseado y lo almacenamos en el repositorio indexado
+            ds.begin(ReadWrite.WRITE) ;
+            RDFDataMgr.read(ds.getDefaultModel(), "bbcColeccion.ttl") ;
+            ds.commit();
+            ds.end();
+
+
+/*
             // Retrieving the RDF graph.
 		    Dataset data = TDB2Factory.connectDataset(rdfPath);
             data.begin(ReadWrite.READ) ;
 		    Model model = data.getDefaultModel();
+*/
 
             // Parsing XML file.
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
