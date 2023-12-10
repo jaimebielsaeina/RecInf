@@ -12,7 +12,7 @@ repositories {
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
-    implementation 'org.apache.jena:jena-tdb2:3.5.0','com.github.galigator.openllet:openllet-jena:2.6.3','org.apache.jena:jena-text:3.5.0'
+    implementation 'org.apache.jena:jena-tdb2:3.5.0','com.github.galigator.openllet:openllet-jena:2.6.3','org.apache.jena:jena-text:3.5.0','guru.nidi:graphviz-java:0.5.0','org.openjfx:javafx-base:17'
 }
 
 test {

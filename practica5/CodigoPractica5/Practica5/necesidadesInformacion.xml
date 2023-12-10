@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><informationNeeds>
+    <informationNeed>
+        <identifier>101-4</identifier>
+        <text> 
+          SELECT ?document 
+          WHERE {
+            {
+              ?document &lt;dc:subject&gt; ?subject .
+              FILTER (CONTAINS(?subject, "animacion") || CONTAINS(?subject, "vision por computador"))
+            }
+            {
+              ?document &lt;dc:date&gt; ?date .
+              FILTER (?date &gt;= 2003)
+            }
+            {
+              ?document &lt;dc:language&gt; ?lang .
+              FILTER (?lang = "spa")
+            }
+          }
+	</text>
+    </informationNeed>
+    <informationNeed>
+        <identifier>106-4</identifier>
+        <text>
+          SELECT ?document
+          WHERE {
+            {
+              ?document &lt;dc:subject&gt; ?subject .
+              FILTER (CONTAINS(?subject, "perro") || CONTAINS(?subject, "gato"))
+            }
+            {
+              ?document &lt;dc:date&gt; ?date .
+              FILTER (?date &gt;= "2012" &amp;&amp; ?date &lt;= "2018")
+            }
+          }
+	</text>
+    </informationNeed>
+    <informationNeed>
+        <identifier>206-4</identifier>
+        <text>
+		      SELECT ?document
+          WHERE {
+            {
+              {
+                ?document &lt;dc:creator&gt; ?creator .
+                FILTER (CONTAINS(?creator, "Lopez"))
+              }
+              UNION
+              {
+                ?document &lt;dc:contributor&gt; ?contributor .
+                FILTER (CONTAINS(?contributor, "Lopez"))
+              }
+            }
+            {
+              ?document &lt;dc:publisher&gt; ?publisher .
+              FILTER (CONTAINS(?publisher, "Informatica"))
+            }
+          }
+	</text>
+    </informationNeed>
+    <informationNeed>
+        <identifier>209-2</identifier>
+        <text>
+          SELECT ?document
+          WHERE {
+            {
+              {
+                ?document &lt;dc:subject&gt; ?subject .
+                FILTER(CONTAINS(?subject, "arte") &amp;&amp; CONTAINS(?subject, "aragones")
+                  &amp;&amp; !CONTAINS(?subject, "XX") &amp;&amp; !CONTAINS(?subject, "XXI"))
+              }
+            }
+          }
+	</text>
+    </informationNeed>
+    <informationNeed>
+        <identifier>305-4</identifier>
+        <text>
+          SELECT ?document
+          WHERE {
+            {
+              {
+                ?document &lt;dc:subject&gt; ?subject .
+                FILTER(CONTAINS(?subject, "algoritmo") &amp;&amp; CONTAINS(?subject, "busqueda")
+                  &amp;&amp; CONTAINS(?subject, "medicina"))
+              }
+            }
+          }
+	</text>
+    </informationNeed>
+</informationNeeds>
