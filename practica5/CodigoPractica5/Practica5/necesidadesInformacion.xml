@@ -4,93 +4,113 @@
         <text>
             prefix text: &lt;http://jena.apache.org/text#&gt;
             prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
-            Select ?document ?score1 ?score2 ?scoretot where {
+            Select ?document ?sc1 ?sc2 ?sc3 ?sc4 ?sc5 ?sc6 ?score where {
                 ?document dc:language 'spa' .
                 ?document dc:type ?t . FILTER(?t = 'TAZ-TFG' || ?t = 'TAZ-TFM') .
                 ?document dc:date ?y . FILTER(?y >= '2003') .
+                ?document dc:title ?title .
                 ?document dc:description ?desc .
-                optional {(?document ?score2) text:query (dc:description 'anima' ) } .
-                optional { (?document ?score1) text:query (dc:description 'vision por computador' ) } .
-                bind (coalesce(?score2,0) as ?scoretot)
-            } ORDER BY DESC (?scoretot)
+                ?document dc:subject ?subj .
+                optional { filter (contains (ucase(?title), 'ANIMACION')) bind (1 as ?sc1) } .
+                optional { filter (contains (ucase(?desc), 'ANIMACION')) bind (0.5 as ?sc2) } .
+                optional { filter (contains (ucase(?subj), 'ANIMACION')) bind (0.75 as ?sc3) } .
+                optional { filter (contains (ucase(?title), 'VISION') &amp;&amp; contains (ucase(?title), 'COMPUTADOR')) bind (1 as ?sc4) } .
+                optional { filter (contains (ucase(?desc), 'VISION') &amp;&amp; contains (ucase(?desc), 'COMPUTADOR')) bind (0.5 as ?sc5) } .
+                optional { filter (contains (ucase(?subj), 'VISION') &amp;&amp; contains (ucase(?subj), 'COMPUTADOR')) bind (0.75 as ?sc6) } .
+                bind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0)
+                    + coalesce(?sc4,0) + coalesce(?sc5,0) + coalesce(?sc6,0) as ?score) .
+                filter (?score > 0)
+            } ORDER BY DESC (?score)
 	    </text>
     </informationNeed>
     <informationNeed>
         <identifier>106-4</identifier>
         <text>
-            <!--Select distinct ?document
-            Where {?document ?a ?b}-->
-          <!--SELECT ?document
-          WHERE {
-            {
-              ?document &lt;dc:subject&gt; ?subject .
-              FILTER (CONTAINS(?subject, "perro") || CONTAINS(?subject, "gato"))
-            }
-            {
-              ?document &lt;dc:date&gt; ?date .
-              FILTER (?date &gt;= "2012" &amp;&amp; ?date &lt;= "2018")
-            }
-          }-->
-            prefix foaf: &lt;http://xmlns.com/foaf/0.1/&gt;
             prefix text: &lt;http://jena.apache.org/text#&gt;
             prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
-            Select ?x ?score2 ?scoretot where {
-            optional {(?x ?score2) text:query (dc:type 'TAZ-TFG' )}.
-            bind (coalesce(?score2,0) as ?scoretot)
-            } ORDER BY DESC(?scoretot)
+            Select ?document ?sc1 ?sc2 ?sc3 ?sc4 ?sc5 ?sc6 ?score where {
+                ?document dc:date ?y . FILTER(?y >= '2012') . FILTER (?y &lt;= '2018') .
+                ?document dc:title ?title .
+                ?document dc:description ?desc .
+                ?document dc:subject ?subj .
+                optional { filter (contains (ucase(?title), 'PERRO')) bind (1 as ?sc1) } .
+                optional { filter (contains (ucase(?desc), 'PERRO')) bind (0.5 as ?sc2) } .
+                optional { filter (contains (ucase(?subj), 'PERRO')) bind (0.75 as ?sc3) } .
+                optional { filter (contains (ucase(?title), 'GATO')) bind (1 as ?sc4) } .
+                optional { filter (contains (ucase(?desc), 'GATO')) bind (0.5 as ?sc5) } .
+                optional { filter (contains (ucase(?subj), 'GATO')) bind (0.75 as ?sc6) } .
+                optional { filter (contains (ucase(?subj), 'VETERINARIA')) bind (2 as ?sc7) } .
+                bind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0) + coalesce(?sc4,0)
+                    + coalesce(?sc5,0) + coalesce(?sc6,0) + coalesce(?sc7,0) as ?score) .
+                filter (?score > 0)
+            } ORDER BY DESC (?score)
 	</text>
     </informationNeed>
     <informationNeed>
         <identifier>206-4</identifier>
         <text>
-		      SELECT ?document
-          WHERE {
-            {
-              {
-                ?document &lt;dc:creator&gt; ?creator .
-                FILTER (CONTAINS(?creator, "Lopez"))
-              }
-              UNION
-              {
-                ?document &lt;dc:contributor&gt; ?contributor .
-                FILTER (CONTAINS(?contributor, "Lopez"))
-              }
-            }
-            {
-              ?document &lt;dc:publisher&gt; ?publisher .
-              FILTER (CONTAINS(?publisher, "Informatica"))
-            }
-          }
+          prefix text: &lt;http://jena.apache.org/text#&gt;
+          prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
+          Select ?document ?sc1 ?sc2 ?score where {
+              ?document dc:type ?t . FILTER(?t = 'TAZ-TFG' || ?t = 'TAZ-TFM') .
+              ?document dc:publisher ?publisher . FILTER (CONTAINS(ucase(?publisher), 'INFORMATICA')) .
+              ?document dc:creator ?creator .
+              ?document dc:contributor ?contributor .
+              optional { filter (contains (?creator, 'Lopez')) bind (1 as ?sc1) } .
+              optional { filter (contains (?contributor, 'Lopez')) bind (0.5 as ?sc2) } .
+              bind (coalesce(?sc1,0) + coalesce(?sc2,0) as ?score) .
+              filter (?score > 0)
+          } ORDER BY DESC (?score)
 	</text>
     </informationNeed>
     <informationNeed>
         <identifier>209-2</identifier>
         <text>
-          SELECT ?document
-          WHERE {
-            {
-              {
-                ?document &lt;dc:subject&gt; ?subject .
-                FILTER(CONTAINS(?subject, "arte") &amp;&amp; CONTAINS(?subject, "aragones")
-                  &amp;&amp; !CONTAINS(?subject, "XX") &amp;&amp; !CONTAINS(?subject, "XXI"))
-              }
-            }
-          }
+          prefix text: &lt;http://jena.apache.org/text#&gt;
+          prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
+          Select ?document ?score where { 
+              ?document dc:title ?title . FILTER(!CONTAINS(?title, 'XX') &amp;&amp; !CONTAINS(?title, 'XXI')) .
+              ?document dc:subject ?subj . FILTER(!CONTAINS(?subj, 'XX') &amp;&amp; !CONTAINS(?subj, 'XXI')) .
+              ?document dc:description ?desc . FILTER(!CONTAINS(?desc, 'XX') &amp;&amp; !CONTAINS(?desc, 'XXI')) .
+              optional { filter (contains (ucase(?title), 'ARTE')) bind (0.6 as ?sc1) } .
+              optional { filter (contains (ucase(?subj), 'ARTE')) bind (0.5 as ?sc2) } .
+              optional { filter (contains (ucase(?description), 'ARTE')) bind (0.4 as ?sc3) } .
+              bind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0) as ?scorearte) .
+              filter (?scorearte > 0) .
+              optional { filter (contains (ucase(?title), 'ARAGONES')) bind (0.6 as ?sc4) } .
+              optional { filter (contains (ucase(?subj), 'ARAGONES')) bind (0.5 as ?sc5) } .
+              optional { filter (contains (ucase(?description), 'ARAGONES')) bind (0.4 as ?sc6) } .
+              bind (?scorearte + coalesce(?sc4,0) + coalesce(?sc5,0) + coalesce(?sc6,0) as ?score) .
+          } ORDER BY DESC (?score)
 	</text>
     </informationNeed>
     <informationNeed>
         <identifier>305-4</identifier>
         <text>
-          SELECT ?document
-          WHERE {
-            {
-              {
-                ?document &lt;dc:subject&gt; ?subject .
-                FILTER(CONTAINS(?subject, "algoritmo") &amp;&amp; CONTAINS(?subject, "busqueda")
-                  &amp;&amp; CONTAINS(?subject, "medicina"))
-              }
-            }
-          }
+          prefix text: &lt;http://jena.apache.org/text#&gt;
+            prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
+            Select ?document ?score where {
+                ?document dc:title ?title .
+                ?document dc:description ?desc .
+                ?document dc:subject ?subj .
+                ?document dc:subject ?subj2 .
+                ?document dc:subject ?subj3 .
+                optional { filter (contains (UCASE(?title), 'ALGORITMO') &amp;&amp; contains (UCASE(?title), 'BUSQUEDA')) bind (0.5 as ?sc1) } .
+                optional { filter (contains (UCASE(?desc), 'ALGORITMO') &amp;&amp; contains (UCASE(?desc), 'BUSQUEDA')) bind (0.5 as ?sc2) } .
+                optional { filter exists {(contains (UCASE(?subj), 'BUSQUEDA')) bind (0.25 as ?sc3) } .
+                optional { filter (contains (UCASE(?subj2), 'ALGORITMO')) bind (0.25 as ?sc4) } .
+                bind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0) + coalesce(?sc4,0) as ?scorealgbusq) .
+                filter (?scorealgbusq >= 0.5) .
+                optional { filter (contains (ucase(?subj3), 'MEDICINA')) bind (0.5 as ?sc5) } .
+                optional { filter (contains (ucase(?title), 'MEDICINA') || contains (ucase(?desc), 'MEDICINA')) bind (1.5 as ?sc5) } .
+                optional { filter (contains (ucase(?title), 'CADENA') &amp;&amp; contains (ucase(?title), 'PROTEINAS')) bind (1 as ?sc6) } .
+                optional { filter (contains (ucase(?desc), 'CADENA') &amp;&amp; contains (ucase(?desc), 'PROTEINAS')) bind (1 as ?sc7) } .
+                optional { filter (contains (ucase(?title), 'PACIENTE') &amp;&amp; contains (ucase(?title), 'SINTOMA')) bind (1 as ?sc8) } .
+                optional { filter (contains (ucase(?desc), 'PACIENTE') &amp;&amp; contains (ucase(?desc), 'SINTOMA')) bind (1 as ?sc9) } .
+                bind (coalesce(?sc5,0) + coalesce(?sc6,0) + coalesce(?sc7,0) + coalesce(?sc8,0) + coalesce(?sc9,0) as ?scoremedicina) .
+                filter (?scoremedicina > 0) .
+                bind (?scorealgbusq + ?scoremedicina as ?score) .
+            } ORDER BY DESC (?score)
 	</text>
     </informationNeed>
 </informationNeeds>

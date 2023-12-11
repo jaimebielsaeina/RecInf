@@ -191,7 +191,8 @@ public class SemanticSearcher {
                     ResultSet results = qexec.execSelect() ;
                     while (results.hasNext()) {
                         QuerySolution sol = results.nextSolution() ;
-                        resultsWriter.write(sol + "\n");
+                        //resultsWriter.write(sol + "\n");
+                        resultsWriter.write(identifier + "\t" + sol.get("document") + "\t" + sol.get("score") + "\n");
                     }
                 }
                 ds.end();
