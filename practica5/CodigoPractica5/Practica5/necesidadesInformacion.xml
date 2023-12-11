@@ -1,28 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?><informationNeeds>
     <informationNeed>
         <identifier>101-4</identifier>
-        <text> 
-          SELECT ?document 
-          WHERE {
-            {
-              ?document &lt;dc:subject&gt; ?subject .
-              FILTER (CONTAINS(?subject, "animacion") || CONTAINS(?subject, "vision por computador"))
-            }
-            {
-              ?document &lt;dc:date&gt; ?date .
-              FILTER (?date &gt;= 2003)
-            }
-            {
-              ?document &lt;dc:language&gt; ?lang .
-              FILTER (?lang = "spa")
-            }
-          }
-	</text>
+        <text>
+            prefix text: &lt;http://jena.apache.org/text#&gt;
+            prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
+            Select ?document ?score1 ?score2 ?scoretot where {
+                ?document dc:language 'spa' .
+                ?document dc:type ?t . FILTER(?t = 'TAZ-TFG' || ?t = 'TAZ-TFM') .
+                ?document dc:date ?y . FILTER(?y >= '2003') .
+                ?document dc:description ?desc .
+                optional {(?document ?score2) text:query (dc:description 'anima' ) } .
+                optional { (?document ?score1) text:query (dc:description 'vision por computador' ) } .
+                bind (coalesce(?score2,0) as ?scoretot)
+            } ORDER BY DESC (?scoretot)
+	    </text>
     </informationNeed>
     <informationNeed>
         <identifier>106-4</identifier>
         <text>
-          SELECT ?document
+            <!--Select distinct ?document
+            Where {?document ?a ?b}-->
+          <!--SELECT ?document
           WHERE {
             {
               ?document &lt;dc:subject&gt; ?subject .
@@ -32,7 +30,14 @@
               ?document &lt;dc:date&gt; ?date .
               FILTER (?date &gt;= "2012" &amp;&amp; ?date &lt;= "2018")
             }
-          }
+          }-->
+            prefix foaf: &lt;http://xmlns.com/foaf/0.1/&gt;
+            prefix text: &lt;http://jena.apache.org/text#&gt;
+            prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
+            Select ?x ?score2 ?scoretot where {
+            optional {(?x ?score2) text:query (dc:type 'TAZ-TFG' )}.
+            bind (coalesce(?score2,0) as ?scoretot)
+            } ORDER BY DESC(?scoretot)
 	</text>
     </informationNeed>
     <informationNeed>

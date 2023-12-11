@@ -113,7 +113,7 @@ public class RankingDeResultadosTDB2 {
         	    + "optional {(?x ?score2) text:query (dct:description 'music' )}. "
         	    + "optional {(?x ?score1) text:query (foaf:name 'music' )}. "
         	    + "bind (coalesce(?score1,0)+coalesce(?score2,0) as ?scoretot) "    
-        		+ "} ORDER BY DESC(?scoretot)";        
+        		+ "} ORDER BY DESC(?scoretot)";
         query = QueryFactory.create(q) ;
         ds.begin(ReadWrite.READ) ;
         try (QueryExecution qexec = QueryExecutionFactory.create(query, ds)) {

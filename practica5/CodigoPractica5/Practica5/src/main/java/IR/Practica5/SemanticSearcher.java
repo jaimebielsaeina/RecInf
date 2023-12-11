@@ -8,7 +8,6 @@ import java.util.List;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import demo.SpanishAnalyzer2;
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.Query;
@@ -29,6 +28,7 @@ import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.jena.vocabulary.DC;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -128,24 +128,24 @@ public class SemanticSearcher {
 
         // Create processing classes.
         Query query;
-        QueryExecution qexec;
         String queryStr;
 
         try {
 
             //definimos la configuración del repositorio indexado
-            EntityDefinition entDef = new EntityDefinition("uri", "name", ResourceFactory.createProperty("http://xmlns.com/foaf/0.1/","name"));
+            EntityDefinition entDef = new EntityDefinition("uri", "identifier", ResourceFactory.createProperty("http://purl.org/dc/elements/1.1/","identifier"));
             entDef.set("description", DC.description.asNode());
+            entDef.set("subject", DC.subject.asNode());
             TextIndexConfig config = new TextIndexConfig(entDef);
-            config.setAnalyzer(new SpanishAnalyzer2());
-            config.setQueryAnalyzer(new SpanishAnalyzer2());
+            config.setAnalyzer(new SpanishAnalyzer());
+            config.setQueryAnalyzer(new SpanishAnalyzer());
             config.setMultilingualSupport(true);
 
             //definimos el repositorio indexado todo en disco
             //se borra el repositorio para forzar a que cada vez que lo ejecutamos se cree de cero
-            FileUtils.deleteDirectory(new File("repositorio"));
-            Dataset ds1 = TDB2Factory.connectDataset(rdfPath + "tdb2");
-            Directory dir =  new MMapDirectory(Paths.get(rdfPath + "lucene"));
+            FileUtils.deleteDirectory(new File("rdfPath"));
+            Dataset ds1 = TDB2Factory.connectDataset(rdfPath + "/tdb2");
+            Directory dir =  new MMapDirectory(Paths.get("./" + rdfPath + "/lucene"));
             Dataset ds = TextDatasetFactory.createLucene(ds1, dir, config) ;
 
             // cargamos el fichero deseado y lo almacenamos en el repositorio indexado
@@ -183,21 +183,23 @@ public class SemanticSearcher {
 
                 NodeList infoNeedText = infoNeed.getElementsByTagName("text");
                 if (infoNeedText.getLength() != 1) continue;
-                String text = infoNeedText.item(0).getTextContent();
+                queryStr = infoNeedText.item(0).getTextContent();
 
-                queryStr = text;
-                query = QueryFactory.create(queryStr);
-                qexec = QueryExecutionFactory.create(query, model) ;
-                try {
+                query = QueryFactory.create(queryStr) ;
+                ds.begin(ReadWrite.READ) ;
+                try (QueryExecution qexec = QueryExecutionFactory.create(query, ds)) {
                     ResultSet results = qexec.execSelect() ;
-                    for ( ; results.hasNext() ; )
-                    {
+                    while (results.hasNext()) {
                         QuerySolution sol = results.nextSolution() ;
-                        RDFNode x = sol.get("document") ;
-                        if (x.isLiteral()) resultsWriter.write(identifier + "\t" + x.toString() + "\n");
-                        else resultsWriter.write(identifier + "\t" + x.asResource().getURI() + "\n");
+                        resultsWriter.write(sol + "\n");
                     }
-                } finally { qexec.close(); }
+                }
+                ds.end();
+
+                        //QuerySolution sol = results.nextSolution() ;
+                        //RDFNode x = sol.get("document") ;
+                        //if (x.isLiteral()) resultsWriter.write(identifier + "\t" + x.toString() + "\n");
+                        //else resultsWriter.write(identifier + "\t" + x.asResource().getURI() + "\n");
 
                     // Show results as usual.
                     //showResults(searcher, query, identifier, resultsWriter);
