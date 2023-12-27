@@ -1,20 +1,14 @@
 package IR.Practica5;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import java.util.Date;
-import java.util.Properties;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.rdf.model.StmtIterator;
-import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.query.Dataset;
@@ -23,33 +17,16 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
-import org.apache.jena.vocabulary.VCARD;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.IndexWriterConfig.OpenMode;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
+
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-/*import guru.nidi.graphviz.attribute.Color;
-import guru.nidi.graphviz.attribute.Font;
-import guru.nidi.graphviz.attribute.Label;
-import guru.nidi.graphviz.attribute.RankDir;
-import guru.nidi.graphviz.attribute.Shape;
-import guru.nidi.graphviz.engine.Format;
-import guru.nidi.graphviz.engine.Graphviz;
-import guru.nidi.graphviz.model.MutableGraph;*/
-
-
 public class SemanticGenerator {
-    //private IndexFiles() {}
+
+    // Field names.
     final private static String[] fieldNames = {
         "title",
-        //"identifier",
         "subject",
         "type",
         "description",
@@ -65,6 +42,7 @@ public class SemanticGenerator {
         "issued",
     };
 
+    // Field URIs.
     final private static Property[] fieldRelations = new Property[fieldNames.length];
 
     /** Index all text files under a directory. */
@@ -98,36 +76,34 @@ public class SemanticGenerator {
 
         Date start = new Date();
 
-        // crea un modelo vacio
+        // Creates an empty model.
         Model model = ModelFactory.createDefaultModel();
 
-        for (int i = 0; i < fieldNames.length; i++) {
-            fieldRelations[i] = model.createProperty("http://purl.org/dc/elements/1.1/" + fieldNames[i]);
-        }
+        // Generates the relations which will be used which will be used to make the trios.
+        for (int i = 0; i < fieldNames.length; i++)
+                fieldRelations[i] = model.createProperty("http://purl.org/dc/elements/1.1/" + fieldNames[i]);
 
         try {
-            System.out.println("Creating RDF graph on directory '" + rdfPath + "'...");
 
-            Directory dir = FSDirectory.open(Paths.get(rdfPath));
-            //Analyzer analyzer = new SpanishAnalyzer2();
-            //IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
+            System.out.println("Creating RDF graph on directory '" + rdfPath + "'...");
 
             addDocsToRDFGraph(model, docDir);
 
             Date end = new Date();
             System.out.println(end.getTime() - start.getTime() + " total milliseconds");
 
-            // Print the RDF graph
-            // printRDFGraph(model);
-            //plotRDF(model);
+            //lo guardamos en un fichero rdf en formato xml
+            model.write(new FileOutputStream(new File("data.rdf")), "RDF/XML-ABBREV");
 
+            /*// Deleting the previous information on the directory expected to store the data.
             FileUtils.deleteDirectory(new File(rdfPath));
 		    Dataset data = TDB2Factory.connectDataset(rdfPath + "/tdb2");
-            //hacemos una transacción de escritura y confirmamos los cambios
+
+            // Making a write transaction and confirming the changes.
             data.begin(ReadWrite.WRITE) ;
             data.getDefaultModel().add(model);
             data.commit();
-            data.end();
+            data.end();*/
 
         } catch (IOException e) {
             System.out.println(" caught a " + e.getClass() +
@@ -154,6 +130,7 @@ public class SemanticGenerator {
     private static void addDocToRDFGraph(Model model, File file) throws IOException {
 
         try {
+
             // Create a DocumentBuilderFactory.
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             // Create a DocumentBuilder.
@@ -161,6 +138,7 @@ public class SemanticGenerator {
             // Parse the XML file.
             org.w3c.dom.Document document = builder.parse(file);
 
+            // Getting the identifier. It will be needed for every trio.
             String docIdent = document.getElementsByTagName("dc:identifier").item(0).getTextContent();
             Resource res = model.createResource(docIdent);
 
@@ -169,13 +147,13 @@ public class SemanticGenerator {
                 // Traverse and manipulate the XML document.
                 elements = document.getElementsByTagName("dc:" + fieldNames[i]);
 
+                // For each property of the document, create a trio linking it as the following:
+                // <identifier> dc:<property> <literal>
                 for  (int j=0; j<elements.getLength(); j++) {
                     RDFNode object = model.createLiteral(((Element)elements.item(j)).getTextContent());
                     model.add (res, fieldRelations[i], object);
                 }
             }
-
-            
 
         } catch (Exception e) {
             System.out.println(" caught a " + e.getClass() +
@@ -184,76 +162,4 @@ public class SemanticGenerator {
 
     }
 
-    private static void printRDFGraph(Model model) {
-        // Iterate over statements in the model
-        StmtIterator iterator = model.listStatements();
-        while (iterator.hasNext()) {
-            Statement statement = iterator.next();
-            System.out.println(statement);
-        }
-    }
-    
-    /*public static void plotRDF(Model model) throws IOException
-    {
-        String dot = convertToDOT(model);
-        renderDOT(dot, "output.png");
-    }*/
-
-    /*public static void renderDOT(String dot, String outputPath) throws IOException {
-        MutableGraph g = Graphviz.fromString(dot).engine(Format.DOT).render(RankDir.LEFT_TO_RIGHT);
-
-        // You can customize the graph appearance using attributes
-        g.graphAttrs()
-                .add(Font.name("Arial"))
-                .add(Color.WHITE);
-        g.nodeAttrs().add(Shape.RECTANGLE);
-
-        // Save the graph as an image
-        Graphviz.fromGraph(g).width(800).render(Format.PNG).toFile(new File(outputPath));*/
-
-
-        /*try {
-            // Write DOT content to a file
-            FileWriter fileWriter = new FileWriter("graph.dot");
-            fileWriter.write(dot);
-            fileWriter.close();
-
-            // Execute the Graphviz dot command to generate an image
-            Process process = Runtime.getRuntime().exec("dot -Tpng graph.dot -o " + outputImagePath);
-            process.waitFor();
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-        }*/
-    //}
-
-
-
-    public static String convertToDOT(Model model) {
-        StringBuilder dotStringBuilder = new StringBuilder();
-        dotStringBuilder.append("digraph RDFGraph {\n");
-
-        // Iterate over statements in the model
-        StmtIterator iterator = model.listStatements();
-        while (iterator.hasNext()) {
-            Statement statement = iterator.next();
-            String subject = statement.getSubject().toString();
-            String predicate = statement.getPredicate().toString();
-            String object = statement.getObject().toString();
-
-            // Escape special characters
-            subject = escapeForDOT(subject);
-            predicate = escapeForDOT(predicate);
-            object = escapeForDOT(object);
-
-            dotStringBuilder.append(String.format("  \"%s\" -> \"%s\" [label=\"%s\"];\n", subject, object, predicate));
-        }
-
-        dotStringBuilder.append("}\n");
-        return dotStringBuilder.toString();
-    }
-
-    private static String escapeForDOT(String input) {
-        // Implement your own escaping logic if needed
-        return input.replace("\"", "\\\"");
-    }
 }
