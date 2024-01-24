@@ -2,22 +2,20 @@
 	<informationNeed>
 		<identifier>101-4</identifier>
 		<text>
-			prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
-			select ?document ?score where {
-				?document dc:language 'spa' .
-				?document dc:type ?t . filter(?t = 'TAZ-TFG' || ?t = 'TAZ-TFM') .
-				?document dc:date ?y . filter(?y >= '2003') .
-				?document dc:title ?title .
-				?document dc:description ?desc .
-				optional { filter (contains (ucase(?title), 'ANIMACION')) bind (1 as ?sc1) } .
-				optional { filter (contains (ucase(?desc), 'ANIMACION')) bind (0.5 as ?sc2) } .
-				optional { filter exists {?document dc:subject ?subj . filter(contains (ucase(?subj), 'ANIMACION'))} bind (0.75 as ?sc3) } .
-				optional { filter (contains (ucase(?title), 'VISION') &amp;&amp; contains (ucase(?title), 'COMPUTADOR')) bind (1 as ?sc4) } .
-				optional { filter (contains (ucase(?desc), 'VISION') &amp;&amp; contains (ucase(?desc), 'COMPUTADOR')) bind (0.5 as ?sc5) } .
-				optional { filter exists {?document dc:subject ?subj . filter(contains (ucase(?subj), 'VISION'))} bind (0.4 as ?sc6) } .
-				optional { filter exists {?document dc:subject ?subj . filter(contains (ucase(?subj), 'COMPUTADOR'))} bind (0.4 as ?sc7) } .
-				bind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0) + coalesce(?sc4,0)
-					+ coalesce(?sc5,0) + coalesce(?sc6,0) + coalesce(?sc7,0) as ?score) .
+			prefix zag:  &lt;zag:>
+			prefix text: &lt;http://jena.apache.org/text#>
+			select distinct ?document where {
+				?document zag:language 'spa' .
+				?document zag:type ?t . filter(?t = 'TAZ-TFG' || ?t = 'TAZ-TFM') .
+				?document zag:date ?y . filter(?y >= '2003') .
+				optional { (?document ?sc1) text:query (zag:title 'animación' )} .
+				optional { (?document ?sc2) text:query (zag:description 'animación' )} .
+				optional { (?document ?sc3) text:query (zag:subject 'animación' )} .
+				optional { (?document ?sc4) text:query (zag:title 'visión computador' )} .
+				optional { (?document ?sc5) text:query (zag:description 'visión computador' )} .
+				optional { (?document ?sc6) text:query (zag:subject 'visión computador' )} .
+				bind (coalesce(?sc1,0)*0.3 + coalesce(?sc2,0)*0.2 + coalesce(?sc3,0)*0.5
+					+ coalesce(?sc4,0)*0.3 + coalesce(?sc5,0)*0.2 + coalesce(?sc6,0)*0.5 as ?score) .
 				filter (?score > 0)
 			} order by desc (?score)
 		</text>
@@ -25,20 +23,22 @@
 	<informationNeed>
 		<identifier>106-4</identifier>
 		<text>
-			prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
-			select ?document ?score where {
-				?document dc:date ?y . filter(?y >= '2012') . filter (?y &lt;= '2018') .
-				?document dc:title ?title .
-				?document dc:description ?desc .
-				optional { filter (contains (ucase(?title), 'PERRO')) bind (1 as ?sc1) } .
-				optional { filter (contains (ucase(?desc), 'PERRO')) bind (0.5 as ?sc2) } .
-				optional { filter exists {?document dc:subject ?subj . filter(contains (ucase(?subj), 'PERRO'))} bind (0.75 as ?sc3) } .
-				optional { filter (contains (ucase(?title), 'GATO')) bind (1 as ?sc4) } .
-				optional { filter (contains (ucase(?desc), 'GATO')) bind (0.5 as ?sc5) } .
-				optional { filter exists {?document dc:subject ?subj . filter(contains (ucase(?subj), 'GATO'))} bind (0.75 as ?sc6) } .
-				optional { filter exists {?document dc:subject ?subj . filter(contains (ucase(?subj), 'VETERINARIA'))} bind (2 as ?sc7) } .
-				bind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0) + coalesce(?sc4,0)
-					+ coalesce(?sc5,0) + coalesce(?sc6,0) + coalesce(?sc7,0) as ?score) .
+			prefix zag:  &lt;zag:>
+			prefix text: &lt;http://jena.apache.org/text#>
+			select distinct ?document where {
+				?document zag:date ?y . filter(?y >= '2012') . filter (?y &lt;= '2018') .
+				optional { (?document ?sc1) text:query (zag:title 'canina perro') } .
+				optional { (?document ?sc2) text:query (zag:description 'canina perro') } .
+				optional { (?document ?sc3) text:query (zag:subject 'canina perro') } .
+				optional { (?document ?sc4) text:query (zag:title 'felina gato') } .
+				optional { (?document ?sc5) text:query (zag:description 'felina gato') } .
+				optional { (?document ?sc6) text:query (zag:subject 'felina gato') } .
+				optional { (?document ?sc7) text:query (zag:title 'veterinaria') } .
+				optional { (?document ?sc8) text:query (zag:description 'veterinaria') } .
+				optional { (?document ?sc9) text:query (zag:subject 'veterinaria') } .
+				bind (coalesce(?sc1,0)*0.3 + coalesce(?sc2,0)*0.2 + coalesce(?sc3,0)*0.5
+					+ coalesce(?sc4,0)*0.3 + coalesce(?sc5,0)*0.2 + coalesce(?sc6,0)*0.5
+					+ coalesce(?sc7,0)*0.6 + coalesce(?sc8,0)*0.4 + coalesce(?sc9,0) as ?score) .
 				filter (?score > 0)
 			} order by desc (?score)
 		</text>
@@ -46,14 +46,17 @@
 	<informationNeed>
 		<identifier>206-4</identifier>
 		<text>
-			prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
-			select ?document ?sc1 ?sc2 ?score where {
-				?document dc:type ?t . filter(?t = 'TAZ-TFG' || ?t = 'TAZ-TFM') .
-				?document dc:creator ?creator .
-				?document dc:contributor ?contributor .
-				optional { filter (contains (?creator, 'Lopez')) bind (1 as ?sc1) } .
-				optional { filter (contains (?contributor, 'Lopez')) bind (0.5 as ?sc2) } .
-				bind (coalesce(?sc1,0) + coalesce(?sc2,0) as ?score) .
+			prefix zag:  &lt;zag:>
+			prefix text: &lt;http://jena.apache.org/text#>
+			select distinct ?document where {
+				?document zag:type ?t . filter(?t = 'TAZ-TFG' || ?t = 'TAZ-TFM') .
+				?document zag:publisher ?publisher .
+				?document zag:creator ?creator .
+				?document zag:contributor ?contributor .
+				optional { filter (contains (ucase(?publisher), 'INFORMÁTICA')) bind (0.6 as ?sc1) } .
+				optional { filter (contains (?creator, 'López')) bind (1 as ?sc2) } .
+				optional { filter (contains (?contributor, 'López')) bind (0.3 as ?sc3) } .
+				bind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0) as ?score) .
 				filter (?score > 0)
 			} order by desc (?score)
 		</text>
@@ -61,47 +64,48 @@
 	<informationNeed>
 		<identifier>209-2</identifier>
 		<text>
-			prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
-			select ?document ?score where {
-				?document dc:title ?title . filter(!contains(?title, 'XX') &amp;&amp; !contains(?title, 'XXI')) .
-				?document dc:subject ?subj . filter(!contains(?subj, 'XX') &amp;&amp; !contains(?subj, 'XXI')) .
-				?document dc:description ?desc . filter(!contains(?desc, 'XX') &amp;&amp; !contains(?desc, 'XXI')) .
-				optional { filter (contains (ucase(?title), 'ARTE')) bind (0.6 as ?sc1) } .
-				optional { filter exists {?document dc:subject ?subj2 . filter(contains (ucase(?subj2), 'ARTE'))} bind (0.5 as ?sc2) } .
-				optional { filter (contains (ucase(?description), 'ARTE')) bind (0.4 as ?sc3) } .
-				bind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0) as ?scorearte) .
-				filter (?scorearte > 0) .
-				optional { filter (contains (ucase(?title), 'ARAGONES')) bind (0.6 as ?sc4) } .
-				optional { filter exists {?document dc:subject ?subj2 . filter(contains (ucase(?subj2), 'ARAGONES'))} bind (0.5 as ?sc5) } .
-				optional { filter (contains (ucase(?description), 'ARAGONES')) bind (0.4 as ?sc6) } .
-				bind (?scorearte + coalesce(?sc4,0) + coalesce(?sc5,0) + coalesce(?sc6,0) as ?score) .
+			prefix zag:  &lt;zag:>
+			prefix text: &lt;http://jena.apache.org/text#>
+			select distinct ?document where {
+				filter not exists { ?document zag:title ?title . filter(contains(?title, 'XX') || contains(?title, 'XXI')) } .
+				filter not exists { ?document zag:description ?desc . filter(contains(?desc, 'XX') || contains(?desc, 'XXI')) } .
+				filter not exists { ?document zag:subject ?subj . filter(contains(?subj, 'XX') || contains(?subj, 'XXI')) } .
+				optional { (?document ?sc1) text:query (zag:title 'arte') } .
+				optional { (?document ?sc2) text:query (zag:description 'arte') } .
+				optional { (?document ?sc3) text:query (zag:subject 'arte') } .
+				bind (coalesce(?sc1,0)*0.4 + coalesce(?sc2,0)*0.3 + coalesce(?sc3,0)*0.4 as ?scorearte) .
+				optional { (?document ?sc4) text:query (zag:title 'aragón') } .
+				optional { (?document ?sc5) text:query (zag:description 'aragón') } .
+				optional { (?document ?sc6) text:query (zag:subject 'aragón') } .
+				bind (?scorearte + coalesce(?sc4,0) + coalesce(?sc5,0)*0.6 + coalesce(?sc6,0)*0.7 as ?score) .
+				filter(?score > 0)
 			} order by desc (?score)
 		</text>
 	</informationNeed>
 	<informationNeed>
 		<identifier>305-4</identifier>
 		<text>
-			prefix dc:	&lt;http://purl.org/dc/elements/1.1/&gt;
-			select ?document ?score where {
-				?document dc:title ?title .
-				?document dc:description ?desc .
-				optional { filter (contains (ucase(?title), 'BUSQUEDA')) bind (0.25 as ?sc1) } .
-				optional { filter (contains (ucase(?desc), 'BUSQUEDA')) bind (0.25 as ?sc2) } .
-				optional { filter exists {?document dc:subject ?subj . filter(contains (ucase(?subj), 'BUSQUEDA'))} bind (0.25 as ?sc3) } .
-				bind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0) + coalesce(?sc4,0) as ?scorebusq) .
-				optional { filter (contains (ucase(?title), 'ALGORITMO')) bind (0.25 as ?sc4) } .
-				optional { filter (contains (ucase(?desc), 'ALGORITMO')) bind (0.25 as ?sc5) } .
-				optional { filter exists {?document dc:subject ?subj . filter(contains (ucase(?subj), 'ALGORITMO'))} bind (0.25 as ?sc6) } .
-				bind (coalesce(?sc4,0) + coalesce(?sc5,0) + coalesce(?sc6,0) as ?scorealg) .
-				optional { filter exists {?document dc:subject ?subj . filter(contains (ucase(?subj), 'MEDICINA'))} bind (0.5 as ?sc7) } .
-				optional { filter (contains (ucase(?title), 'MEDICINA') || contains (ucase(?desc), 'MEDICINA')) bind (1.5 as ?sc7) } .
-				optional { filter (contains (ucase(?title), 'CADENA') &amp;&amp; contains (ucase(?title), 'PROTEINAS')) bind (1 as ?sc8) } .
-				optional { filter (contains (ucase(?desc), 'CADENA') &amp;&amp; contains (ucase(?desc), 'PROTEINAS')) bind (1 as ?sc9) } .
-				optional { filter (contains (ucase(?title), 'PACIENTE') &amp;&amp; contains (ucase(?title), 'SINTOMA')) bind (1 as ?sc10) } .
-				optional { filter (contains (ucase(?desc), 'PACIENTE') &amp;&amp; contains (ucase(?desc), 'SINTOMA')) bind (1 as ?sc11) } .
-				bind (coalesce(?sc7,0) + coalesce(?sc8,0) + coalesce(?sc9,0) + coalesce(?sc10,0) + coalesce(?sc11,0) as ?scoremedicina) .
+			prefix zag:  &lt;zag:>
+			prefix text: &lt;http://jena.apache.org/text#>
+			select distinct ?document where {
+				optional { (?document ?sc1) text:query (zag:title 'algoritmo búsqueda') } .
+				optional { (?document ?sc2) text:query (zag:description 'algoritmo búsqueda') } .
+				optional { (?document ?sc3) text:query (zag:subject 'algoritmo búsqueda') } .
+				bind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0) as ?scorealgbusq) .
+				filter (?scorealgbusq > 0) .
+				optional { (?document ?sc4) text:query (zag:title 'medicina') } .
+				optional { (?document ?sc5) text:query (zag:description 'medicina') } .
+				optional { (?document ?sc6) text:query (zag:subject 'medicina') } .
+				optional { (?document ?sc7) text:query (zag:title 'cadena proteínas') } .
+				optional { (?document ?sc8) text:query (zag:description 'cadena proteínas') } .
+				optional { (?document ?sc9) text:query (zag:subject 'cadena proteínas') } .
+				optional { (?document ?sc10) text:query (zag:title 'paciente síntoma') } .
+				optional { (?document ?sc11) text:query (zag:description 'paciente síntoma') } .
+				optional { (?document ?sc12) text:query (zag:subject 'paciente síntoma') } .
+				bind (coalesce(?sc4,0) + coalesce(?sc5,0) + coalesce(?sc6,0) + coalesce(?sc7,0) + coalesce(?sc8,0)
+					+ coalesce(?sc9,0) + coalesce(?sc10,0) + coalesce(?sc11,0) + coalesce(?sc12,0) as ?scoremedicina) .
 				filter (?scoremedicina > 0) .
-				bind (?scorebusq + ?scorealg + ?scoremedicina as ?score)
+				bind (?scorealgbusq*0.15 + ?scoremedicina*0.3 as ?score)
 			} order by desc (?score)
 		</text>
 	</informationNeed>

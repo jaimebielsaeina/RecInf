@@ -120,14 +120,22 @@ public class RankingDeResultadosMem {
         System.out.println("Resultados finales eliminando los duplicados");
         System.out.println("---------------------------------------------");
                   
-        q ="prefix foaf: <http://xmlns.com/foaf/0.1/> "
-        		+ "prefix text: <http://jena.apache.org/text#> "
-        		+ "prefix dct:	<http://purl.org/dc/terms/> "
-        		+ "Select distinct ?x  where { "   		
-        	    + "optional {(?x ?score2) text:query (dct:description 'music' )}. "
-        	    + "optional {(?x ?score1) text:query (foaf:name 'music' )}. "
-        	    + "bind (coalesce(?score1,0)+coalesce(?score2,0) as ?scoretot) "    
-        		+ "} ORDER BY DESC(?scoretot)";
+        q ="prefix dct:\t<http://purl.org/dc/terms/>\n" +
+                "\t\t\tprefix text: <http://jena.apache.org/text#>\n" +
+                "\t\t\tselect ?document ?score where {\n" +
+                "\t\t\t\t?document dct:language 'spa' .\n" +
+                "\t\t\t\t?document dct:type ?t . filter(?t = 'TAZ-TFG' || ?t = 'TAZ-TFM') .\n" +
+                "\t\t\t\t?document dct:date ?y . filter(?y >= '2003') .\n" +
+                "\t\t\t\toptional { (?document ?sc1) text:query (dct:title 'animacion' )} .\n" +
+                "\t\t\t\toptional { (?document ?sc2) text:query (dct:description 'animacion' )} .\n" +
+                "\t\t\t\toptional { (?document ?sc3) text:query (dct:subject 'animacion' )} .\n" +
+                "\t\t\t\toptional { (?document ?sc4) text:query (dct:title 'vision computador' )} .\n" +
+                "\t\t\t\toptional { (?document ?sc5) text:query (dct:description 'vision computador' )} .\n" +
+                "\t\t\t\toptional { (?document ?sc6) text:query (dct:subject 'vision computador' )} .\n" +
+                "\t\t\t\tbind (coalesce(?sc1,0) + coalesce(?sc2,0) + coalesce(?sc3,0) + coalesce(?sc4,0)\n" +
+                "\t\t\t\t\t+ coalesce(?sc5,0) + coalesce(?sc6,0) as ?score) .\n" +
+                "\t\t\t\tfilter (?score > 0)\n" +
+                "\t\t\t} order by desc (?score)";
         
         query = QueryFactory.create(q) ;
         try (QueryExecution qexec = QueryExecutionFactory.create(query, ds)) {

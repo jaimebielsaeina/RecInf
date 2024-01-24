@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
@@ -18,9 +19,11 @@ import org.apache.jena.query.ResultSet;
 import org.apache.jena.query.text.EntityDefinition;
 import org.apache.jena.query.text.TextDatasetFactory;
 import org.apache.jena.query.text.TextIndexConfig;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.tdb2.TDB2Factory;
+import org.apache.jena.util.FileManager;
 import org.apache.jena.vocabulary.DC;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.store.Directory;
@@ -31,6 +34,8 @@ import org.xml.sax.InputSource;
 
 public class SemanticSearcher {
     public static final int INITIAL_HITS = 100;
+
+    final private static String ourPrefix = "zag:";
 
     /**
      * Simple command-line based search demo.
@@ -71,28 +76,27 @@ public class SemanticSearcher {
 
         try {
 
+            Model model = FileManager.get().loadModel(rdfPath, "RDF/XML-ABBREV");
+
             // Defining the indexed repository settings.
-            EntityDefinition entDef = new EntityDefinition("uri", "identifier", ResourceFactory.createProperty("http://purl.org/dc/elements/1.1/","identifier"));
-            entDef.set("contributor", DC.contributor.asNode());
-            entDef.set("creator", DC.creator.asNode());
-            entDef.set("description", DC.description.asNode());
-            entDef.set("publisher", DC.publisher.asNode());
-            entDef.set("subject", DC.subject.asNode());
-            entDef.set("title", DC.title.asNode());
+            EntityDefinition entDef = new EntityDefinition("uri", "title", model.getProperty(ourPrefix, "title"));
+            entDef.set("description", model.getProperty(ourPrefix, "description").asNode());
+            entDef.set("subject", model.getProperty(ourPrefix, "subject").asNode());
             TextIndexConfig config = new TextIndexConfig(entDef);
             config.setAnalyzer(new SpanishAnalyzer());
             config.setQueryAnalyzer(new SpanishAnalyzer());
             config.setMultilingualSupport(true);
 
             // Defining the indexed repository.
-            FileUtils.deleteDirectory(new File("rdfPath"));
-            Dataset ds1 = TDB2Factory.connectDataset(rdfPath + "/tdb2");
-            Directory dir =  new MMapDirectory(Paths.get("./" + rdfPath + "/lucene"));
-            Dataset ds = TextDatasetFactory.createLucene(ds1, dir, config) ;
+            FileUtils.deleteDirectory(new File("rep"));
+            Dataset ds1 = TDB2Factory.connectDataset("rep/tdb2");
+            Directory dir =  new MMapDirectory(Paths.get("rep/lucene"));
+            Dataset ds = TextDatasetFactory.createLucene(ds1, dir, config);
 
             // Loading the file and sroting it on the indexed repository.
             ds.begin(ReadWrite.WRITE) ;
-            RDFDataMgr.read(ds.getDefaultModel(), "bbcColeccion.ttl") ;
+            ds.getDefaultModel().add(model);
+            //RDFDataMgr.read(ds.getDefaultModel(), "bbcColeccion.ttl") ;
             ds.commit();
             ds.end();
 
@@ -127,7 +131,8 @@ public class SemanticSearcher {
                     while (results.hasNext()) {
                         // Print the retrieved documents.
                         QuerySolution sol = results.nextSolution() ;
-                        resultsWriter.write(identifier + "\t" + sol.get("document")/* + "\t" + sol.get("score")*/ + "\n");
+                        resultsWriter.write(identifier + "\t" + sol.get("document") +/* "\t" + sol.getLiteral("score") + */"\n");
+                        //resultsWriter.write(identifier + "\t" + sol.get("document")/* + "\t" + sol.get("score")*/ + "\n");
                     }
                 }
                 ds.end();

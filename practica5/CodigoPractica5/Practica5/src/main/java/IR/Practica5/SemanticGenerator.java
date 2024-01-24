@@ -9,20 +9,21 @@ import java.util.Date;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.commons.io.LineIterator;
+import org.apache.jena.rdf.model.*;
 import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.RDFNode;
-import org.apache.jena.rdf.model.Resource;
 
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 public class SemanticGenerator {
+
+    final private static String ourPrefix = "zag:";
 
     // Field names.
     final private static String[] fieldNames = {
@@ -32,14 +33,11 @@ public class SemanticGenerator {
         "description",
         "creator",
         "publisher",
-        "format",
         "language",
         "contributor",
         "relation",
         "rights",
-        "date",
-        "created",
-        "issued",
+        "date"
     };
 
     // Field URIs.
@@ -79,13 +77,88 @@ public class SemanticGenerator {
         // Creates an empty model.
         Model model = ModelFactory.createDefaultModel();
 
+        // Defining the classes
+        Resource doc = model.createResource(ourPrefix + "doc");
+        model.add(doc, RDF.type, RDFS.Class);
+        Resource pers = model.createResource(ourPrefix + "pers");
+        model.add(pers, RDF.type, RDFS.Class);
+        Resource orgz = model.createResource(ourPrefix + "orgz");
+        model.add(orgz, RDF.type, RDFS.Class);
+        Resource year = model.createResource(ourPrefix + "year");
+        model.add(year, RDF.type, RDFS.Class);
+        Resource lang = model.createResource(ourPrefix + "lang");
+        model.add(lang, RDF.type, RDFS.Class);
+        Resource rght = model.createResource(ourPrefix + "rght");
+        model.add(rght, RDF.type, RDFS.Class);
+        Resource dtyp = model.createResource(ourPrefix + "dtyp");
+        model.add(dtyp, RDF.type, RDFS.Class);
+
+        // Defining properties
+        Resource r;
+        // title
+        r = model.createResource(ourPrefix + "title");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, RDFS.Literal);
+        model.add(r, RDFS.domain, doc);
+        // subject
+        r = model.createResource(ourPrefix + "subject");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, RDFS.Literal);
+        model.add(r, RDFS.domain, doc);
+        // type
+        r = model.createResource(ourPrefix + "type");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, dtyp);
+        model.add(r, RDFS.domain, doc);
+        // description
+        r = model.createResource(ourPrefix + "description");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, RDFS.Literal);
+        model.add(r, RDFS.domain, doc);
+        // creator
+        r = model.createResource(ourPrefix + "creator");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, pers);
+        model.add(r, RDFS.domain, doc);
+        // publisher
+        r = model.createResource(ourPrefix + "publisher");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, orgz);
+        model.add(r, RDFS.domain, doc);
+        // language
+        r = model.createResource(ourPrefix + "language");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, lang);
+        model.add(r, RDFS.domain, doc);
+        // contributor
+        r = model.createResource(ourPrefix + "contributor");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, pers);
+        model.add(r, RDFS.domain, doc);
+        // relation
+        r = model.createResource(ourPrefix + "relation");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, RDFS.Literal);
+        model.add(r, RDFS.domain, doc);
+        // rights
+        r = model.createResource(ourPrefix + "rights");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, rght);
+        model.add(r, RDFS.domain, doc);
+        // date
+        r = model.createResource(ourPrefix + "date");
+        model.add(r, RDF.type, RDF.Property);
+        model.add(r, RDFS.range, year);
+        model.add(r, RDFS.domain, doc);
+
+
         // Generates the relations which will be used which will be used to make the trios.
         for (int i = 0; i < fieldNames.length; i++)
-                fieldRelations[i] = model.createProperty("http://purl.org/dc/elements/1.1/" + fieldNames[i]);
+                fieldRelations[i] = model.createProperty(ourPrefix + fieldNames[i]);
 
         try {
 
-            System.out.println("Creating RDF graph on directory '" + rdfPath + "'...");
+            System.out.println("Creating RDF graph on file '" + rdfPath + "'...");
 
             addDocsToRDFGraph(model, docDir);
 
@@ -93,7 +166,7 @@ public class SemanticGenerator {
             System.out.println(end.getTime() - start.getTime() + " total milliseconds");
 
             //lo guardamos en un fichero rdf en formato xml
-            model.write(new FileOutputStream(new File("data.rdf")), "RDF/XML-ABBREV");
+            model.write(new FileOutputStream(new File(rdfPath)), "RDF/XML-ABBREV");
 
             /*// Deleting the previous information on the directory expected to store the data.
             FileUtils.deleteDirectory(new File(rdfPath));

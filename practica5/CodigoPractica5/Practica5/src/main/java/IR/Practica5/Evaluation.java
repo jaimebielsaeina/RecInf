@@ -305,6 +305,8 @@ public class Evaluation {
 			// For each information need:
 			for (String qRel : qRels.keySet()) {
 
+				System.out.println(qRel);
+
 				// Gets information about its results.
 				boolean[] areRelevant = new boolean[results.get(qRel).size()];
 
